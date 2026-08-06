@@ -22,6 +22,7 @@
     allInspirations: [],
     allLogos: [],
     folderFilter: '',
+    editingPostId: null, // si se está reeditando la imagen de un post ya guardado (en vez de crear uno nuevo)
   };
 
   function el(id) { return document.getElementById(id); }
@@ -109,6 +110,37 @@
     box.querySelectorAll('[data-publish-id]').forEach(function (btn) {
       btn.addEventListener('click', function () { togglePublicado(btn.dataset.publishId, btn.dataset.publicado !== 'true'); });
     });
+    box.querySelectorAll('[data-editar-post-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () { editarPostImagenEnGenerador(btn.dataset.editarPostId); });
+    });
+  }
+
+  async function editarPostImagenEnGenerador(id) {
+    var post = state.allPosts.find(function (p) { return p.id === id; });
+    if (!post) return;
+    switchTab('ai');
+    setGenStatus('Cargando imagen del post…');
+    try {
+      var info = await urlToBase64(post.image_url);
+      state.imageInfo = info;
+      state.imageUrl = post.image_url;
+      state.inspirationId = null;
+      state.genResult = null;
+      state.editingPostId = post.id;
+      el('rs-gen-preview').src = info.dataUrl;
+      el('rs-gen-preview').style.display = 'block';
+      el('rs-gen-prompt').value = post.sub || '';
+      el('rs-gen-ficha').style.display = 'none';
+      el('rs-gen-result').style.display = 'none';
+      el('rs-gen-cuenta').value = post.cuenta;
+      el('rs-gen-carpeta').value = post.carpeta || '';
+      el('rs-gen-fecha').value = post.fecha_programada || '';
+      el('rs-gen-blocks').innerHTML = '<p class="rs-feed-empty">Editando solo la imagen — el copy actual del post no cambia salvo que pulses "Generar con IA" otra vez.</p>';
+      el('rs-gen-result').style.display = 'block';
+      setGenStatus('✓ Editando la imagen de un post existente — usa "🪄 Editar con IA" abajo y luego guarda para actualizarlo.');
+    } catch (e) {
+      setGenStatus('Error cargando la imagen: ' + e.message);
+    }
   }
 
   function metaRowHtml(p) {
@@ -121,7 +153,8 @@
   }
 
   function postCardHtml(channel, p) {
-    var del = '<button class="rs-post-del" data-del-id="' + p.id + '">×</button>';
+    var del = '<button class="rs-post-del" data-del-id="' + p.id + '">×</button>' +
+      '<button class="rs-post-del" style="right:38px;" data-editar-post-id="' + p.id + '" title="Editar imagen con IA">✎</button>';
     if (channel === 'wa') {
       return '<div class="rs-post-card">' + del +
         '<div class="rs-wa-head">' + esc(p.handle) + ' · Canal de difusión</div>' +
@@ -208,10 +241,67 @@
       box.innerHTML = '<p class="rs-gallery-hint">✓ verde = ya usada para un post</p><div class="rs-gallery-grid">' +
         items.map(function (i) {
           return '<div class="rs-gallery-item"><img src="' + esc(i.image_url) + '">' +
-            (i.used ? '<span class="rs-gallery-used">✓</span>' : '') + '</div>';
+            (i.used ? '<span class="rs-gallery-used">✓</span>' : '') +
+            '<div class="rs-gallery-actions">' +
+            '<button data-editar-insp-id="' + i.id + '" title="Editar en el Generador IA">✎</button>' +
+            '<button data-del-insp-id="' + i.id + '" title="Eliminar">×</button>' +
+            '</div></div>';
         }).join('') + '</div>';
+      box.querySelectorAll('[data-del-insp-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () { eliminarInspiracion(btn.dataset.delInspId); });
+      });
+      box.querySelectorAll('[data-editar-insp-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () { editarInspiracionEnGenerador(btn.dataset.editarInspId); });
+      });
     }
     renderCalendario();
+  }
+
+  async function eliminarInspiracion(id) {
+    if (!confirm('¿Eliminar esta imagen de inspiración? No se puede deshacer.')) return;
+    try {
+      await BL_API.benditoPost({ accion: 'eliminarInspiracion', id: id });
+      loadGallery();
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message);
+    }
+  }
+
+  async function urlToBase64(url) {
+    var res = await fetch(url);
+    var blob = await res.blob();
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var dataUrl = reader.result;
+        resolve({ base64: dataUrl.split(',')[1], mediaType: blob.type || 'image/png', dataUrl: dataUrl });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function editarInspiracionEnGenerador(id) {
+    var insp = state.allInspirations.find(function (i) { return i.id === id; });
+    if (!insp) return;
+    switchTab('ai');
+    setGenStatus('Cargando imagen…');
+    try {
+      var info = await urlToBase64(insp.image_url);
+      state.imageInfo = info;
+      state.imageUrl = insp.image_url;
+      state.inspirationId = insp.id;
+      state.genResult = null;
+      state.editingPostId = null;
+      el('rs-gen-preview').src = info.dataUrl;
+      el('rs-gen-preview').style.display = 'block';
+      el('rs-gen-prompt').value = insp.prompt || '';
+      el('rs-gen-ficha').style.display = 'none';
+      el('rs-gen-result').style.display = 'none';
+      setGenStatus(insp.prompt ? '✓ Imagen cargada — revisa el prompt.' : 'Imagen cargada — escribe o genera el prompt.');
+    } catch (e) {
+      setGenStatus('Error cargando la imagen: ' + e.message);
+    }
   }
 
   // ── CALENDARIO ─────────────────────────────────────────
@@ -300,6 +390,7 @@
     state.imageInfo = info;
     state.genResult = null;
     state.logoInfo = null;
+    state.editingPostId = null;
     el('rs-gen-result').style.display = 'none';
     el('rs-gen-art-file').value = '';
     el('rs-gen-art-preview').style.display = 'none';
@@ -444,7 +535,8 @@
   }
 
   async function handleSavePost() {
-    if (!state.genResult || !state.imageUrl) return;
+    var editando = !!state.editingPostId;
+    if (!state.imageUrl || (!state.genResult && !editando)) return;
     var cuenta = el('rs-gen-cuenta').value;
     var isDilo = cuenta === 'dilobonito';
     var prompt = el('rs-gen-prompt').value;
@@ -465,27 +557,39 @@
       }
     }
 
-    var post = {
-      cuenta: cuenta,
-      handle: isDilo ? 'dilobonito.es' : 'bendito_lab',
-      sub: prompt.slice(0, 60),
-      image_url: finalImageUrl,
-      ig_caption: r.caption_ig,
-      ig_hashtags: r.hashtags_ig,
-      li_name: isDilo ? 'Dilo Bonito' : 'Bendito Lab',
-      li_role: isDilo ? 'Personalización en directo para bodas y eventos' : 'Personalización de producto para empresas y eventos',
-      li_caption: r.caption_li,
-      li_hashtags: r.hashtags_li,
-      wa_text: r.caption_wa,
-      stories_text: r.stories_text,
-      fecha: 'Generado con IA',
-      carpeta: el('rs-gen-carpeta').value.trim() || null,
-      fecha_programada: el('rs-gen-fecha').value || null,
-    };
-
     try {
-      await BL_API.benditoPost({ accion: 'crearPost', post: post, inspiration_id: state.inspirationId });
-      setGenStatus('✓ Guardado en el archivo.');
+      if (editando) {
+        var patch = { id: state.editingPostId, image_url: finalImageUrl };
+        if (r) {
+          patch.ig_caption = r.caption_ig; patch.ig_hashtags = r.hashtags_ig;
+          patch.li_caption = r.caption_li; patch.li_hashtags = r.hashtags_li;
+          patch.wa_text = r.caption_wa; patch.stories_text = r.stories_text;
+        }
+        patch.carpeta = el('rs-gen-carpeta').value.trim() || null;
+        patch.fecha_programada = el('rs-gen-fecha').value || null;
+        await BL_API.benditoPost(Object.assign({ accion: 'actualizarPost' }, patch));
+        setGenStatus('✓ Post actualizado.');
+      } else {
+        var post = {
+          cuenta: cuenta,
+          handle: isDilo ? 'dilobonito.es' : 'bendito_lab',
+          sub: prompt.slice(0, 60),
+          image_url: finalImageUrl,
+          ig_caption: r.caption_ig,
+          ig_hashtags: r.hashtags_ig,
+          li_name: isDilo ? 'Dilo Bonito' : 'Bendito Lab',
+          li_role: isDilo ? 'Personalización en directo para bodas y eventos' : 'Personalización de producto para empresas y eventos',
+          li_caption: r.caption_li,
+          li_hashtags: r.hashtags_li,
+          wa_text: r.caption_wa,
+          stories_text: r.stories_text,
+          fecha: 'Generado con IA',
+          carpeta: el('rs-gen-carpeta').value.trim() || null,
+          fecha_programada: el('rs-gen-fecha').value || null,
+        };
+        await BL_API.benditoPost({ accion: 'crearPost', post: post, inspiration_id: state.inspirationId });
+        setGenStatus('✓ Guardado en el archivo.');
+      }
       resetGenForm();
       loadFeeds();
       loadGallery();
@@ -504,6 +608,7 @@
     state.genResult = null;
     state.logoInfo = null;
     state.iaEditedInfo = null;
+    state.editingPostId = null;
     el('rs-gen-file').value = '';
     el('rs-gen-preview').style.display = 'none';
     el('rs-gen-prompt').value = '';

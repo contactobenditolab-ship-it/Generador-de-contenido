@@ -172,6 +172,14 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true, data });
       }
 
+      if (accion === 'eliminarInspiracion') {
+        const id = body.id;
+        if (!id) return res.status(400).json({ error: 'Falta id' });
+        const { error } = await supabase.from('inspirations').delete().eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+
       if (accion === 'crearPost') {
         const d = body.post;
         if (!d || !d.image_url || !CUENTAS.includes(d.cuenta)) return res.status(400).json({ error: 'Datos de post inválidos' });
@@ -226,6 +234,7 @@ module.exports = async function handler(req, res) {
         if (body.publicado !== undefined) patch.publicado = !!body.publicado;
         if (body.carpeta !== undefined) patch.carpeta = body.carpeta ? String(body.carpeta).slice(0, 120) : null;
         if (body.fecha_programada !== undefined) patch.fecha_programada = body.fecha_programada || null;
+        if (body.image_url !== undefined) patch.image_url = body.image_url;
         const { data, error } = await supabase.from('posts').update(patch).eq('id', id).select().single();
         if (error) throw error;
 
