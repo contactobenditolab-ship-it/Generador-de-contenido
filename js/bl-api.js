@@ -27,6 +27,12 @@
     });
     const d = await r.json();
     if (d.ok && d.token) setToken(d.token);
+    // d.error solo aparece en fallos del servidor (p.ej. ADMIN_PASSWORD no
+    // configurada, error 500) — distinto de una contraseña simplemente
+    // incorrecta (401 { ok: false }, sin error). Se propaga para que el
+    // login no muestre "contraseña incorrecta" cuando el problema real es
+    // otro.
+    if (d.error) throw new Error(d.error);
     return d.ok === true;
   }
 
