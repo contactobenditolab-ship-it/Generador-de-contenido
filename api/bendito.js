@@ -9,7 +9,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
-const { callClaudeVisionJSON } = require('../lib/anthropic');
+const { callGeminiVisionJSON } = require('../lib/gemini-text');
 const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM } = require('../lib/bendito-prompts');
 const { editarImagenConIA } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
@@ -99,7 +99,7 @@ module.exports = async function handler(req, res) {
       if (accion === 'sugerirPrompt') {
         const { base64, mediaType } = body;
         if (!base64 || !mediaType) return res.status(400).json({ error: 'Falta base64 o mediaType' });
-        const result = await callClaudeVisionJSON({
+        const result = await callGeminiVisionJSON({
           system: PROMPT_SUGGEST_SYSTEM,
           userText: 'Genera la ficha estructurada y el prompt sugerido para esta imagen.',
           base64, mediaType, maxTokens: 500,
@@ -114,7 +114,7 @@ module.exports = async function handler(req, res) {
           '\nFormato principal solicitado: ' + formato +
           '\nPrompt del usuario: ' + prompt +
           '\n\nGenera el JSON con el copy para los 4 canales, priorizando calidad especialmente en el formato principal solicitado.';
-        const result = await callClaudeVisionJSON({ system: COPY_SYSTEM, userText, base64, mediaType, maxTokens: 1000 });
+        const result = await callGeminiVisionJSON({ system: COPY_SYSTEM, userText, base64, mediaType, maxTokens: 1000 });
         return res.status(200).json(result);
       }
 

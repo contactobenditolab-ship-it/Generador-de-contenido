@@ -2,7 +2,7 @@
 
 App interna (no visible en la web pública) para generar copy de Instagram,
 LinkedIn, WhatsApp y Stories a partir de una imagen de inspiración, usando
-Claude. Cubre las cuentas Bendito Lab (B2B) y Dilo Bonito (B2C).
+Gemini. Cubre las cuentas Bendito Lab (B2B) y Dilo Bonito (B2C).
 
 Extraída del panel "Redes sociales · Generador de contenido" que vivía en
 `admin.html` del repo `bendito-lab-canva` — se mueve aquí para que la app
@@ -17,10 +17,12 @@ funciones serverless en `api/` y Supabase como base de datos.
 - `admin.html` — login + panel del generador (única página de la app).
 - `api/auth.js` — login (password → token HMAC).
 - `api/bendito.js` — endpoint único: subida de imágenes (Vercel Blob),
-  sugerencia de prompt y generación de copy (Claude), CRUD de posts e
-  inspiraciones (Supabase).
-- `lib/anthropic.js`, `lib/bendito-prompts.js` — llamada a Claude y prompts
-  de marca.
+  sugerencia de prompt y generación de copy (Gemini), CRUD de posts,
+  inspiraciones y logos (Supabase).
+- `lib/gemini-text.js`, `lib/bendito-prompts.js` — llamada a Gemini (texto +
+  visión, JSON estructurado) y prompts de marca. Antes usaba Claude
+  (`lib/anthropic.js`, eliminado) — se cambió a Gemini porque tiene nivel
+  gratuito y Anthropic no.
 - `lib/auth.js` — firma/verificación de tokens de sesión.
 - `lib/rate-limit.js` — limitador de intentos de login (tabla
   `rate_limit_hits`, mismo proyecto Supabase que usa Bendito OS).
@@ -28,16 +30,19 @@ funciones serverless en `api/` y Supabase como base de datos.
   "Nano Banana"): integra un logo, texto o dibujo de referencia sobre la
   imagen base de forma realista (no es un simple "pegado" en canvas).
 - `lib/google-calendar.js` — sincroniza los posts con fecha de publicación
-  con el **mismo Google Calendar que usa `bendito-os`** (reutiliza el
-  refresh_token ya guardado en la tabla `google_drive_auth`, no hace falta
-  volver a autorizar nada aquí).
+  con un **calendario de Google secundario** ("Redes sociales · Bendito
+  Lab"), separado del calendario principal (`primary`) que usa
+  `bendito-os` — reutiliza el mismo refresh_token ya guardado en la tabla
+  `google_drive_auth`, no hace falta volver a autorizar nada aquí.
 - `supabase/schema.sql` — tablas `posts` e `inspirations` (las columnas
-  `fecha_programada` y `gcal_id` de `posts` se añadieron después por
+  `fecha_programada` y `gcal_id` de `posts`, la tabla `logos`, y la columna
+  `redes_calendar_id` de `google_drive_auth` se añadieron después por
   migración directa en Supabase, no están en este archivo).
 
 La pestaña "📅 Calendario" del panel muestra pendientes (imágenes sin copy,
 posts sin fecha, posts con fecha pasada sin marcar publicados) y una
-agenda de los posts programados.
+agenda de los posts programados. La pestaña "🖼️ Logos" es una librería de
+logos reutilizables para elegir al editar una imagen con IA.
 
 ## Variables de entorno (Vercel)
 
@@ -45,13 +50,14 @@ agenda de los posts programados.
 - `ADMIN_SESSION_SECRET` — secreto para firmar los tokens de sesión.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — mismo proyecto Supabase
   que ya usan `bendito-os` y `bendito-lab-canva`.
-- `ANTHROPIC_API_KEY` — para generar el copy.
-- `GOOGLE_AI_API_KEY` — API key de Google AI Studio, para la edición de
-  imagen con IA (`lib/gemini-image.js`). Distinta de las credenciales
-  OAuth de Drive/Calendar.
+- `GOOGLE_AI_API_KEY` — API key de Google AI Studio (aistudio.google.com),
+  usada tanto para el texto (`lib/gemini-text.js`) como para la edición de
+  imagen (`lib/gemini-image.js`). Tiene nivel gratuito con límite de
+  peticiones por minuto/día.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — **los mismos valores que ya
   tiene `bendito-os`** en Vercel, para sincronizar con Google Calendar.
-- Vercel Blob debe estar habilitado en el proyecto (subida de imágenes).
+- Vercel Blob debe estar conectado al proyecto (Storage → Blob) para poder
+  subir imágenes.
 
 ## Pendiente / fuera de alcance de esta primera versión
 
