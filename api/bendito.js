@@ -44,6 +44,18 @@ async function subirImagen(body) {
   return { url: result.url, path };
 }
 
+const MEDIA_TYPE_BY_CONTENT_TYPE = { 'image/png': 'image/png', 'image/jpeg': 'image/jpeg', 'image/webp': 'image/webp', 'image/gif': 'image/gif' };
+
+/** Descarga una imagen ya subida (p.ej. un logo guardado) y la devuelve en base64, para pasársela a Gemini. */
+async function descargarImagenBase64(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('No se pudo descargar la imagen de referencia (' + res.status + ')');
+  const contentType = res.headers.get('content-type') || 'image/png';
+  const mediaType = MEDIA_TYPE_BY_CONTENT_TYPE[contentType] || 'image/png';
+  const buf = Buffer.from(await res.arrayBuffer());
+  return { base64: buf.toString('base64'), mediaType };
+}
+
 module.exports = async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
@@ -59,6 +71,11 @@ module.exports = async function handler(req, res) {
       }
       if (tipo === 'inspirations') {
         const { data, error } = await supabase.from('inspirations').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return res.status(200).json({ data: data || [] });
+      }
+      if (tipo === 'logos') {
+        const { data, error } = await supabase.from('logos').select('*').order('created_at', { ascending: false });
         if (error) throw error;
         return res.status(200).json({ data: data || [] });
       }
@@ -84,8 +101,8 @@ module.exports = async function handler(req, res) {
         if (!base64 || !mediaType) return res.status(400).json({ error: 'Falta base64 o mediaType' });
         const result = await callClaudeVisionJSON({
           system: PROMPT_SUGGEST_SYSTEM,
-          userText: 'Genera el prompt sugerido para esta imagen.',
-          base64, mediaType, maxTokens: 300,
+          userText: 'Genera la ficha estructurada y el prompt sugerido para esta imagen.',
+          base64, mediaType, maxTokens: 500,
         });
         return res.status(200).json(result);
       }
@@ -102,12 +119,37 @@ module.exports = async function handler(req, res) {
       }
 
       if (accion === 'editarConIA') {
-        const { baseBase64, baseMediaType, refBase64, refMediaType, instruccion } = body;
+        let { baseBase64, baseMediaType, refBase64, refMediaType, refImageUrl, instruccion } = body;
         if (!baseBase64 || !baseMediaType || !instruccion) {
           return res.status(400).json({ error: 'Faltan campos obligatorios (imagen base e instrucción)' });
         }
+        if (!refBase64 && refImageUrl) {
+          const descargada = await descargarImagenBase64(refImageUrl);
+          refBase64 = descargada.base64;
+          refMediaType = descargada.mediaType;
+        }
         const result = await editarImagenConIA({ baseBase64, baseMediaType, refBase64, refMediaType, instruccion });
         return res.status(200).json({ ok: true, ...result });
+      }
+
+      if (accion === 'subirLogo') {
+        const { base64, mediaType, nombre } = body;
+        if (!base64 || !mediaType) return res.status(400).json({ error: 'Falta la imagen del logo' });
+        const subido = await subirImagen({ base64, mediaType, filename: 'logo-' + (nombre || 'sin-nombre') });
+        const { data, error } = await supabase
+          .from('logos')
+          .insert({ nombre: String(nombre || 'Sin nombre').slice(0, 120), image_url: subido.url })
+          .select().single();
+        if (error) throw error;
+        return res.status(200).json({ ok: true, data });
+      }
+
+      if (accion === 'eliminarLogo') {
+        const id = body.id;
+        if (!id) return res.status(400).json({ error: 'Falta id' });
+        const { error } = await supabase.from('logos').delete().eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
       }
 
       if (accion === 'crearInspiracion') {

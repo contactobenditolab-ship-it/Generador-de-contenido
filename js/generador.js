@@ -20,6 +20,7 @@
     iaEditedInfo: null, // { base64, mediaType, dataUrl } de la imagen ya editada con IA, lista para guardar
     allPosts: [],
     allInspirations: [],
+    allLogos: [],
     folderFilter: '',
   };
 
@@ -46,6 +47,7 @@
     state.loaded = true;
     loadFeeds();
     loadGallery();
+    loadLogos();
   }
 
   // ── FEEDS (IG / LI / WA) ──────────────────────────────
@@ -303,6 +305,7 @@
     el('rs-gen-art-preview').style.display = 'none';
     el('rs-gen-preview').src = info.dataUrl;
     el('rs-gen-preview').style.display = 'block';
+    el('rs-gen-ficha').style.display = 'none';
     setGenStatus('Subiendo imagen…');
 
     try {
@@ -313,15 +316,27 @@
       state.inspirationId = insp.data.id;
 
       setGenStatus('Analizando imagen…');
-      var prompt = await BL_API.benditoPost({ accion: 'sugerirPrompt', base64: info.base64, mediaType: info.mediaType });
-      if (prompt.suggested_prompt) {
-        el('rs-gen-prompt').value = prompt.suggested_prompt;
-        await BL_API.benditoPost({ accion: 'actualizarInspiracion', id: state.inspirationId, prompt: prompt.suggested_prompt });
+      var ficha = await BL_API.benditoPost({ accion: 'sugerirPrompt', base64: info.base64, mediaType: info.mediaType });
+      if (ficha.prompt_sugerido) {
+        el('rs-gen-prompt').value = ficha.prompt_sugerido;
+        await BL_API.benditoPost({ accion: 'actualizarInspiracion', id: state.inspirationId, prompt: ficha.prompt_sugerido });
       }
+      renderFichaImagen(ficha);
       setGenStatus('✓ Prompt sugerido — edítalo si quieres.');
     } catch (err) {
       setGenStatus('Error: ' + err.message);
     }
+  }
+
+  function renderFichaImagen(ficha) {
+    var box = el('rs-gen-ficha');
+    var campos = [
+      ['Objeto', ficha.objeto], ['Material', ficha.material], ['Color', ficha.color_dominante],
+      ['Estilo', ficha.estilo], ['Zona personalizable', ficha.superficie_personalizable], ['Sensación', ficha.sensacion],
+    ].filter(function (c) { return c[1]; });
+    if (!campos.length) { box.style.display = 'none'; return; }
+    box.innerHTML = campos.map(function (c) { return '<strong>' + esc(c[0]) + ':</strong> ' + esc(c[1]); }).join(' · ');
+    box.style.display = 'block';
   }
 
   async function handleArtFileChange(e) {
@@ -331,6 +346,7 @@
     state.logoInfo = info;
     el('rs-gen-art-preview').src = info.dataUrl;
     el('rs-gen-art-preview').style.display = 'block';
+    el('rs-gen-logo-select').value = ''; // solo una fuente de logo a la vez
   }
 
   function setIaEditStatus(msg) { el('rs-gen-ia-status').textContent = msg || ''; }
@@ -342,6 +358,7 @@
       return;
     }
     var btn = el('rs-gen-ia-btn');
+    var logoSeleccionadoUrl = el('rs-gen-logo-select').value;
     btn.disabled = true; btn.textContent = 'Editando…';
     setIaEditStatus('Generando la imagen editada… puede tardar unos segundos.');
     try {
@@ -351,6 +368,7 @@
         baseMediaType: state.imageInfo.mediaType,
         refBase64: state.logoInfo ? state.logoInfo.base64 : undefined,
         refMediaType: state.logoInfo ? state.logoInfo.mediaType : undefined,
+        refImageUrl: (!state.logoInfo && logoSeleccionadoUrl) ? logoSeleccionadoUrl : undefined,
         instruccion: instruccion,
       });
       state.iaEditedInfo = {
@@ -485,6 +503,78 @@
     setIaEditStatus('');
     el('rs-gen-carpeta').value = '';
     el('rs-gen-fecha').value = '';
+    el('rs-gen-ficha').style.display = 'none';
+    el('rs-gen-logo-select').value = '';
+  }
+
+  // ── LOGOS ──────────────────────────────────────────────
+  var logoParaSubir = null; // { base64, mediaType, dataUrl }
+
+  async function loadLogos() {
+    var grid = el('logos-grid');
+    var select = el('rs-gen-logo-select');
+    try {
+      var d = await BL_API.benditoGet('logos');
+      state.allLogos = d.data || [];
+    } catch (e) {
+      grid.innerHTML = '<p class="rs-feed-empty">Error cargando logos: ' + esc(e.message) + '</p>';
+      return;
+    }
+    if (!state.allLogos.length) {
+      grid.innerHTML = '<p class="rs-feed-empty">Todavía no has guardado ningún logo.</p>';
+    } else {
+      grid.innerHTML = state.allLogos.map(function (l) {
+        return '<div class="rs-gallery-item"><img src="' + esc(l.image_url) + '" title="' + esc(l.nombre) + '">' +
+          '<button class="rs-post-del" data-del-logo-id="' + l.id + '">×</button></div>';
+      }).join('');
+      grid.querySelectorAll('[data-del-logo-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () { eliminarLogo(btn.dataset.delLogoId); });
+      });
+    }
+    select.innerHTML = '<option value="">— Ninguno —</option>' +
+      state.allLogos.map(function (l) { return '<option value="' + esc(l.image_url) + '">' + esc(l.nombre) + '</option>'; }).join('');
+  }
+
+  async function handleLogoFileChange(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    logoParaSubir = await fileToBase64(file);
+    el('logo-preview').src = logoParaSubir.dataUrl;
+    el('logo-preview').style.display = 'block';
+  }
+
+  async function handleSubirLogo() {
+    var nombre = el('logo-nombre').value.trim();
+    if (!logoParaSubir || !nombre) {
+      el('logo-status').textContent = 'Elige un archivo y escribe un nombre.';
+      return;
+    }
+    var btn = el('logo-subir-btn');
+    btn.disabled = true;
+    el('logo-status').textContent = 'Guardando…';
+    try {
+      await BL_API.benditoPost({ accion: 'subirLogo', base64: logoParaSubir.base64, mediaType: logoParaSubir.mediaType, nombre: nombre });
+      el('logo-nombre').value = '';
+      el('logo-file').value = '';
+      el('logo-preview').style.display = 'none';
+      logoParaSubir = null;
+      el('logo-status').textContent = '✓ Logo guardado.';
+      loadLogos();
+    } catch (e) {
+      el('logo-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function eliminarLogo(id) {
+    if (!confirm('¿Eliminar este logo de la librería?')) return;
+    try {
+      await BL_API.benditoPost({ accion: 'eliminarLogo', id: id });
+      loadLogos();
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message);
+    }
   }
 
   // ── WIRING ─────────────────────────────────────────────
@@ -500,6 +590,15 @@
     el('rs-gen-art-file').addEventListener('change', handleArtFileChange);
     el('rs-gen-btn').addEventListener('click', handleGenerate);
     el('rs-gen-ia-btn').addEventListener('click', handleEditarConIA);
+    el('logo-file').addEventListener('change', handleLogoFileChange);
+    el('logo-subir-btn').addEventListener('click', handleSubirLogo);
+    el('rs-gen-logo-select').addEventListener('change', function (e) {
+      if (e.target.value) {
+        state.logoInfo = null; // solo una fuente de logo a la vez
+        el('rs-gen-art-file').value = '';
+        el('rs-gen-art-preview').style.display = 'none';
+      }
+    });
     document.querySelector('[data-action="rs-save-post"]').addEventListener('click', handleSavePost);
     el('rs-folder-filter').addEventListener('change', function (e) {
       state.folderFilter = e.target.value;

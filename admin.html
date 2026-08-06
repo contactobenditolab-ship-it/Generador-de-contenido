@@ -109,6 +109,7 @@ input[type="file"]{display:none;}
     <button class="rs-tab" data-rs-tab="ai">🤖 Generador IA</button>
     <button class="rs-tab" data-rs-tab="insp">Inspiración</button>
     <button class="rs-tab" data-rs-tab="cal">📅 Calendario</button>
+    <button class="rs-tab" data-rs-tab="logos">🖼️ Logos</button>
   </div>
 
   <div class="rs-folder-bar" id="rs-folder-bar" style="display:none;">
@@ -132,6 +133,25 @@ input[type="file"]{display:none;}
     </div>
   </div>
 
+  <div class="rs-panel" data-rs-panel="logos">
+    <div class="card" style="max-width:480px;">
+      <div class="card-title">🖼️ Librería de logos</div>
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="logo-nombre" placeholder="Ej: Logo Bendito Lab, Logo Dilo Bonito…">
+      </div>
+      <label class="img-btn" for="logo-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir logo</label>
+      <input type="file" accept="image/*" id="logo-file">
+      <img id="logo-preview" class="rs-gen-preview" style="max-height:120px;object-fit:contain;background:#F4F1E6;">
+      <button class="save-btn" id="logo-subir-btn" style="width:100%;margin-top:10px;">Guardar logo</button>
+      <div class="rs-gen-status" id="logo-status"></div>
+    </div>
+    <div class="card" style="max-width:480px;">
+      <div class="card-title">Guardados</div>
+      <div id="logos-grid" class="rs-gallery-grid"></div>
+    </div>
+  </div>
+
   <div class="rs-panel" data-rs-panel="ai">
     <div class="card" style="max-width:480px;">
       <div class="card-title">🤖 Generador con IA</div>
@@ -150,6 +170,8 @@ input[type="file"]{display:none;}
       <label class="img-btn" for="rs-gen-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir imagen</label>
       <input type="file" accept="image/*" id="rs-gen-file">
       <img id="rs-gen-preview" class="rs-gen-preview">
+
+      <div id="rs-gen-ficha" style="display:none;font-size:12px;color:#555;background:#F4F1E6;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.6;"></div>
 
       <div class="field">
         <label>Prompt</label>
@@ -192,11 +214,17 @@ input[type="file"]{display:none;}
         </div>
 
         <div class="field">
-          <label>Imagen de referencia del logo/texto/dibujo (opcional)</label>
+          <label>Logo guardado (opcional)</label>
+          <select id="rs-gen-logo-select"><option value="">— Ninguno —</option></select>
+          <div class="field-hint">Elige uno de tu librería de logos (pestaña 🖼️ Logos) en vez de subirlo cada vez.</div>
+        </div>
+
+        <div class="field">
+          <label>O imagen de referencia suelta (opcional)</label>
         </div>
         <label class="img-btn" for="rs-gen-art-file" style="display:inline-block;">📤 Elegir imagen de referencia</label>
         <input type="file" accept="image/*" id="rs-gen-art-file">
-        <div class="field-hint" style="margin-top:6px;">Opcional — si el texto/logo ya está escrito en la instrucción de arriba no hace falta subir nada aquí.</div>
+        <div class="field-hint" style="margin-top:6px;">Solo hace falta una de las dos opciones — si el texto/logo ya está escrito en la instrucción de arriba, tampoco hace falta ninguna.</div>
         <img id="rs-gen-art-preview" class="rs-gen-preview" style="max-height:100px;object-fit:contain;background:#F4F1E6;margin-top:10px;">
 
         <button class="save-btn" id="rs-gen-ia-btn" data-action="rs-edit-ia" style="width:100%;margin-top:10px;">🪄 Editar con IA</button>
