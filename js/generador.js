@@ -19,6 +19,7 @@
     logoInfo: null,     // { dataUrl } de la imagen de referencia (logo/texto/dibujo), sin subir todavía
     iaEditedInfo: null, // { base64, mediaType, dataUrl } de la imagen ya editada con IA, lista para guardar
     allPosts: [],
+    allInspirations: [],
     folderFilter: '',
   };
 
@@ -63,6 +64,7 @@
     }
     renderFolderFilter();
     renderAllFeeds();
+    renderCalendario();
   }
 
   function renderFolderFilter() {
@@ -159,8 +161,21 @@
       var p = state.allPosts.find(function (x) { return x.id === id; });
       if (p) p.publicado = publicado;
       renderAllFeeds();
+      renderCalendario();
     } catch (e) {
       alert('Error al actualizar: ' + e.message);
+    }
+  }
+
+  async function asignarFecha(id, fecha) {
+    if (!fecha) return;
+    try {
+      var res = await BL_API.benditoPost({ accion: 'actualizarPost', id: id, fecha_programada: fecha });
+      var p = state.allPosts.find(function (x) { return x.id === id; });
+      if (p) { p.fecha_programada = res.data.fecha_programada; p.gcal_id = res.data.gcal_id; }
+      renderCalendario();
+    } catch (e) {
+      alert('Error asignando la fecha: ' + e.message);
     }
   }
 
@@ -180,19 +195,84 @@
     try {
       var d = await BL_API.benditoGet('inspirations');
       items = d.data || [];
+      state.allInspirations = items;
     } catch (e) {
       box.innerHTML = '<p class="rs-feed-empty">Error cargando inspiración: ' + esc(e.message) + '</p>';
       return;
     }
     if (!items.length) {
       box.innerHTML = '<p class="rs-feed-empty">Sube tu primera imagen desde el Generador IA.</p>';
+    } else {
+      box.innerHTML = '<p class="rs-gallery-hint">✓ verde = ya usada para un post</p><div class="rs-gallery-grid">' +
+        items.map(function (i) {
+          return '<div class="rs-gallery-item"><img src="' + esc(i.image_url) + '">' +
+            (i.used ? '<span class="rs-gallery-used">✓</span>' : '') + '</div>';
+        }).join('') + '</div>';
+    }
+    renderCalendario();
+  }
+
+  // ── CALENDARIO ─────────────────────────────────────────
+  function hoyISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function renderCalendario() {
+    var pendBox = el('cal-pendientes');
+    var agBox = el('cal-agenda');
+    if (!pendBox || !agBox) return;
+
+    var hoy = hoyISO();
+    var sinCopy = state.allInspirations.filter(function (i) { return !i.used; });
+    var sinFecha = state.allPosts.filter(function (p) { return !p.fecha_programada; });
+    var sinPublicar = state.allPosts.filter(function (p) {
+      return p.fecha_programada && p.fecha_programada < hoy && !p.publicado;
+    });
+
+    var pendHtml = '';
+    if (sinCopy.length) {
+      pendHtml += '<p style="font-size:12px;font-weight:700;color:#E2704A;margin:0 0 6px;">🖼️ ' + sinCopy.length + ' imagen(es) esperando copy — ve a Inspiración y súbelas al Generador IA.</p>';
+    }
+    if (sinPublicar.length) {
+      pendHtml += '<p style="font-size:12px;font-weight:700;color:#C0392B;margin:0 0 10px;">⚠️ ' + sinPublicar.length + ' post(s) con fecha pasada y sin marcar como publicados.</p>';
+    }
+    if (sinFecha.length) {
+      pendHtml += '<p style="font-size:12px;font-weight:700;color:#2F8FEA;margin:0 0 6px;">📅 ' + sinFecha.length + ' post(s) sin fecha de publicación:</p>';
+      pendHtml += sinFecha.map(function (p) {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F0EDE6;">' +
+          '<span style="font-size:12px;flex:1;">' + esc(p.sub || p.ig_caption || p.handle || '(sin descripción)') + '</span>' +
+          '<input type="date" data-assign-fecha-id="' + p.id + '" style="width:150px;padding:5px 6px;border:1px solid #E0DDD6;font-size:12px;">' +
+          '</div>';
+      }).join('');
+    }
+    pendBox.innerHTML = pendHtml || '<p class="rs-feed-empty">Todo al día — nada pendiente.</p>';
+    pendBox.querySelectorAll('[data-assign-fecha-id]').forEach(function (input) {
+      input.addEventListener('change', function () { asignarFecha(input.dataset.assignFechaId, input.value); });
+    });
+
+    var conFecha = state.allPosts.filter(function (p) { return p.fecha_programada; })
+      .sort(function (a, b) { return a.fecha_programada < b.fecha_programada ? -1 : 1; });
+
+    if (!conFecha.length) {
+      agBox.innerHTML = '<p class="rs-feed-empty">No hay posts programados todavía.</p>';
       return;
     }
-    box.innerHTML = '<p class="rs-gallery-hint">✓ verde = ya usada para un post</p><div class="rs-gallery-grid">' +
-      items.map(function (i) {
-        return '<div class="rs-gallery-item"><img src="' + esc(i.image_url) + '">' +
-          (i.used ? '<span class="rs-gallery-used">✓</span>' : '') + '</div>';
-      }).join('') + '</div>';
+    agBox.innerHTML = conFecha.map(function (p) {
+      var vencido = p.fecha_programada < hoy && !p.publicado;
+      return '<div class="rs-post-card" style="margin-bottom:12px;' + (vencido ? 'border-color:#C0392B;' : '') + '">' +
+        '<div class="rs-post-meta" style="padding:12px 12px 0;">' +
+        '<span class="rs-folder-badge">' + esc(p.fecha_programada) + '</span>' +
+        (p.carpeta ? '<span class="rs-folder-badge">' + esc(p.carpeta) + '</span>' : '') +
+        (p.gcal_id ? '<span class="rs-folder-badge" style="background:#E8F5E9;">✓ En Google Calendar</span>' : '') +
+        '</div>' +
+        '<div class="rs-post-body"><p>' + esc(p.sub || p.ig_caption || '(sin descripción)') + '</p></div>' +
+        metaRowHtml(p) +
+        '</div>';
+    }).join('');
+    agBox.querySelectorAll('[data-publish-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () { togglePublicado(btn.dataset.publishId, btn.dataset.publicado !== 'true'); });
+    });
   }
 
   // ── GENERADOR IA ───────────────────────────────────────
@@ -370,6 +450,7 @@
       stories_text: r.stories_text,
       fecha: 'Generado con IA',
       carpeta: el('rs-gen-carpeta').value.trim() || null,
+      fecha_programada: el('rs-gen-fecha').value || null,
     };
 
     try {
@@ -403,6 +484,7 @@
     el('rs-gen-ia-preview').style.display = 'none';
     setIaEditStatus('');
     el('rs-gen-carpeta').value = '';
+    el('rs-gen-fecha').value = '';
   }
 
   // ── WIRING ─────────────────────────────────────────────

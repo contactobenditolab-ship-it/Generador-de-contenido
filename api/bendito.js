@@ -12,6 +12,7 @@ const { requireAuth } = require('../lib/auth');
 const { callClaudeVisionJSON } = require('../lib/anthropic');
 const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM } = require('../lib/bendito-prompts');
 const { editarImagenConIA } = require('../lib/gemini-image');
+const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
@@ -146,6 +147,7 @@ module.exports = async function handler(req, res) {
           wa_text: d.wa_text || null,
           stories_text: d.stories_text || null,
           fecha: d.fecha || null,
+          fecha_programada: d.fecha_programada || null,
           carpeta: d.carpeta ? String(d.carpeta).slice(0, 120) : null,
         };
         const { data, error } = await supabase.from('posts').insert(post).select().single();
@@ -154,14 +156,24 @@ module.exports = async function handler(req, res) {
         if (body.inspiration_id) {
           supabase.from('inspirations').update({ used: true }).eq('id', body.inspiration_id).then(() => {});
         }
+
+        if (data.fecha_programada) {
+          const gcalId = await sincronizarPostCalendar(data);
+          if (gcalId) {
+            await supabase.from('posts').update({ gcal_id: gcalId }).eq('id', data.id);
+            data.gcal_id = gcalId;
+          }
+        }
         return res.status(200).json({ ok: true, data });
       }
 
       if (accion === 'eliminarPost') {
         const id = body.id;
         if (!id) return res.status(400).json({ error: 'Falta id' });
+        const { data: existente } = await supabase.from('posts').select('gcal_id').eq('id', id).maybeSingle();
         const { error } = await supabase.from('posts').delete().eq('id', id);
         if (error) throw error;
+        if (existente?.gcal_id) eliminarEventoPost(existente.gcal_id).catch(() => {});
         return res.status(200).json({ ok: true });
       }
 
@@ -171,8 +183,23 @@ module.exports = async function handler(req, res) {
         const patch = {};
         if (body.publicado !== undefined) patch.publicado = !!body.publicado;
         if (body.carpeta !== undefined) patch.carpeta = body.carpeta ? String(body.carpeta).slice(0, 120) : null;
+        if (body.fecha_programada !== undefined) patch.fecha_programada = body.fecha_programada || null;
         const { data, error } = await supabase.from('posts').update(patch).eq('id', id).select().single();
         if (error) throw error;
+
+        if (body.fecha_programada !== undefined) {
+          if (data.fecha_programada) {
+            const gcalId = await sincronizarPostCalendar(data);
+            if (gcalId && gcalId !== data.gcal_id) {
+              await supabase.from('posts').update({ gcal_id: gcalId }).eq('id', id);
+              data.gcal_id = gcalId;
+            }
+          } else if (data.gcal_id) {
+            eliminarEventoPost(data.gcal_id).catch(() => {});
+            await supabase.from('posts').update({ gcal_id: null }).eq('id', id);
+            data.gcal_id = null;
+          }
+        }
         return res.status(200).json({ ok: true, data });
       }
 

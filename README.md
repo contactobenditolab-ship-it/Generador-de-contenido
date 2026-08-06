@@ -24,7 +24,20 @@ funciones serverless en `api/` y Supabase como base de datos.
 - `lib/auth.js` — firma/verificación de tokens de sesión.
 - `lib/rate-limit.js` — limitador de intentos de login (tabla
   `rate_limit_hits`, mismo proyecto Supabase que usa Bendito OS).
-- `supabase/schema.sql` — tablas `posts` e `inspirations`.
+- `lib/gemini-image.js` — edición de imagen con IA (Gemini 2.5 Flash Image /
+  "Nano Banana"): integra un logo, texto o dibujo de referencia sobre la
+  imagen base de forma realista (no es un simple "pegado" en canvas).
+- `lib/google-calendar.js` — sincroniza los posts con fecha de publicación
+  con el **mismo Google Calendar que usa `bendito-os`** (reutiliza el
+  refresh_token ya guardado en la tabla `google_drive_auth`, no hace falta
+  volver a autorizar nada aquí).
+- `supabase/schema.sql` — tablas `posts` e `inspirations` (las columnas
+  `fecha_programada` y `gcal_id` de `posts` se añadieron después por
+  migración directa en Supabase, no están en este archivo).
+
+La pestaña "📅 Calendario" del panel muestra pendientes (imágenes sin copy,
+posts sin fecha, posts con fecha pasada sin marcar publicados) y una
+agenda de los posts programados.
 
 ## Variables de entorno (Vercel)
 
@@ -33,6 +46,11 @@ funciones serverless en `api/` y Supabase como base de datos.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — mismo proyecto Supabase
   que ya usan `bendito-os` y `bendito-lab-canva`.
 - `ANTHROPIC_API_KEY` — para generar el copy.
+- `GOOGLE_AI_API_KEY` — API key de Google AI Studio, para la edición de
+  imagen con IA (`lib/gemini-image.js`). Distinta de las credenciales
+  OAuth de Drive/Calendar.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — **los mismos valores que ya
+  tiene `bendito-os`** en Vercel, para sincronizar con Google Calendar.
 - Vercel Blob debe estar habilitado en el proyecto (subida de imágenes).
 
 ## Pendiente / fuera de alcance de esta primera versión

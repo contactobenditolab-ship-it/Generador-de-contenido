@@ -108,6 +108,7 @@ input[type="file"]{display:none;}
     <button class="rs-tab" data-rs-tab="wa">WhatsApp</button>
     <button class="rs-tab" data-rs-tab="ai">🤖 Generador IA</button>
     <button class="rs-tab" data-rs-tab="insp">Inspiración</button>
+    <button class="rs-tab" data-rs-tab="cal">📅 Calendario</button>
   </div>
 
   <div class="rs-folder-bar" id="rs-folder-bar" style="display:none;">
@@ -119,6 +120,17 @@ input[type="file"]{display:none;}
   <div class="rs-panel" data-rs-panel="li"><div class="rs-feed" id="rs-feed-li"></div></div>
   <div class="rs-panel" data-rs-panel="wa"><div class="rs-feed" id="rs-feed-wa"></div></div>
   <div class="rs-panel" data-rs-panel="insp"><div class="rs-gallery" id="rs-gallery"></div></div>
+
+  <div class="rs-panel" data-rs-panel="cal">
+    <div class="card" style="max-width:560px;">
+      <div class="card-title">Pendientes</div>
+      <div id="cal-pendientes"></div>
+    </div>
+    <div class="card" style="max-width:560px;">
+      <div class="card-title">Agenda</div>
+      <div id="cal-agenda"></div>
+    </div>
+  </div>
 
   <div class="rs-panel" data-rs-panel="ai">
     <div class="card" style="max-width:480px;">
@@ -155,10 +167,16 @@ input[type="file"]{display:none;}
       </div>
 
       <div class="field">
-        <label>Carpeta (opcional)</label>
+        <label>Carpeta / categoría (opcional)</label>
         <input type="text" id="rs-gen-carpeta" placeholder="Ej: Boda García, Campaña Navidad…" list="rs-carpetas-list">
         <datalist id="rs-carpetas-list"></datalist>
-        <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Podrás filtrar por ella en el archivo.</div>
+        <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Podrás filtrar por ella en el archivo y en el calendario.</div>
+      </div>
+
+      <div class="field">
+        <label>Fecha de publicación (opcional)</label>
+        <input type="date" id="rs-gen-fecha">
+        <div class="field-hint">Si la indicas, se crea un evento en el Google Calendar de Bendito Lab (el mismo que usa bendito-os).</div>
       </div>
 
       <button class="save-btn" id="rs-gen-btn" data-action="rs-generate" style="width:100%;">Generar con IA</button>
