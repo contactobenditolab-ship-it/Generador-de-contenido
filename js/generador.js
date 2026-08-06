@@ -397,6 +397,10 @@
   }
 
   // ── WIRING ─────────────────────────────────────────────
+  // ensureLoaded() NO se llama aquí: en DOMContentLoaded todavía no hay
+  // sesión (la pantalla de login está encima). admin.html llama a
+  // window.Generador.start() solo después de un login válido (o si ya
+  // había un token guardado), para no disparar /api/bendito sin auth.
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.rs-tab').forEach(function (b) {
       b.addEventListener('click', function () { switchTab(b.dataset.rsTab); });
@@ -410,6 +414,10 @@
       renderAllFeeds();
     });
 
-    ensureLoaded();
+    // Si el login ya se resolvió antes de que este script cargara (sesión
+    // con token guardado — ver admin.html), arrancar directamente.
+    if (BL_API.getToken()) ensureLoaded();
   });
+
+  window.Generador = { start: ensureLoaded };
 })();

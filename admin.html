@@ -194,6 +194,7 @@ async function checkLogin(){
     if(ok){
       document.getElementById('login').style.display='none';
       document.getElementById('app').style.display='block';
+      window.Generador && window.Generador.start();
     }else{
       err.textContent='Contraseña incorrecta';
       err.style.display='block';
@@ -210,6 +211,9 @@ document.getElementById('pwd').addEventListener('keydown', function(e){
   if (e.key === 'Enter') checkLogin();
 });
 // Si ya hay una sesión válida (token guardado), saltar la pantalla de login.
+// window.Generador.start() se llama desde generador.js una vez cargado (ver
+// su wiring de DOMContentLoaded), no aquí, porque este script se ejecuta
+// antes de que generador.js exista.
 if (BL_API.getToken()) {
   document.getElementById('login').style.display = 'none';
   document.getElementById('app').style.display = 'block';
