@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Generador de contenido · Bendito Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #FAFAF8; font-family: 'Inter', sans-serif; color: #17233F; }
+
+/* LOGIN */
+#login{position:fixed;inset:0;background:#17233F;display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-box{background:#fff;padding:48px 40px;width:360px;max-width:calc(100vw - 32px);text-align:center;}
+.login-title{font-weight:900;font-size:24px;color:#17233F;letter-spacing:-1px;margin-bottom:4px;}
+.login-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:32px;}
+.login-input{width:100%;padding:14px;border:1.5px solid #ddd;font-size:16px;text-align:center;letter-spacing:4px;margin-bottom:10px;outline:none;}
+.login-input:focus{border-color:#17233F;}
+.login-btn{width:100%;background:#17233F;color:#E8C24A;border:none;font-weight:900;font-size:15px;padding:15px;cursor:pointer;}
+.login-btn:hover{background:#2F8FEA;}
+.login-err{color:#C0392B;font-size:12px;margin-top:10px;display:none;}
+
+/* SHELL */
+#app{display:none;max-width:960px;margin:0 auto;padding:32px 20px 60px;}
+.panel-title{font-weight:800;font-size:20px;margin-bottom:6px;}
+.panel-desc{font-size:13px;color:#888;margin-bottom:24px;line-height:1.5;}
+
+.card{background:#fff;border:1px solid #E0DDD6;padding:22px;margin-bottom:18px;}
+.card-title{font-weight:800;font-size:12px;color:#17233F;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #F0EDE6;}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+.field label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;}
+.field input,.field textarea,.field select{padding:10px 12px;border:1.5px solid #E0DDD6;background:#FAFAF8;font-family:'Inter',sans-serif;font-size:13px;color:#222;outline:none;transition:border-color .2s;width:100%;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:#2F8FEA;background:#fff;}
+.field textarea{min-height:70px;resize:vertical;line-height:1.6;}
+.field-hint{font-size:11px;color:#aaa;margin-top:3px;}
+
+.save-btn{background:#E8C24A;color:#17233F;border:none;font-weight:900;font-size:13px;padding:10px 20px;cursor:pointer;}
+.save-btn:hover{background:#E2704A;color:#fff;}
+.img-btn{display:inline-block;background:#17233F;color:#E8C24A;font-weight:900;font-size:10px;letter-spacing:1px;padding:6px 14px;cursor:pointer;}
+.img-btn:hover{background:#2F8FEA;}
+input[type="file"]{display:none;}
+
+.rs-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.rs-tab{font-size:12px;font-weight:700;padding:8px 14px;border-radius:20px;border:1px solid #E0DDD6;background:transparent;color:#17233F;cursor:pointer;}
+.rs-tab.active{background:#17233F;color:#fff;border-color:#17233F;}
+.rs-panel{display:none;}
+.rs-panel.active{display:block;}
+.rs-feed{max-width:440px;display:flex;flex-direction:column;gap:20px;}
+.rs-feed-empty{font-size:13px;color:#888;}
+.rs-post-card{background:#fff;border:1px solid #E0DDD6;border-radius:10px;overflow:hidden;position:relative;}
+.rs-post-del{position:absolute;top:8px;right:8px;z-index:2;width:24px;height:24px;border-radius:50%;background:rgba(23,35,63,.75);color:#fff;border:none;font-size:13px;cursor:pointer;}
+.rs-post-head{display:flex;align-items:center;gap:8px;padding:10px 12px;font-weight:700;font-size:13px;}
+.rs-post-img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;}
+.rs-post-body{padding:12px;}
+.rs-post-body p{font-size:13px;white-space:pre-line;margin:0 0 6px;}
+.rs-post-tags{font-size:13px;color:#2F8FEA;}
+.rs-post-copy-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;}
+.rs-post-meta{display:flex;align-items:center;gap:6px;padding:0 12px 10px;flex-wrap:wrap;}
+.rs-folder-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;background:#F4F1E6;color:#17233F;}
+.rs-publish-toggle{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;border:1px solid #ccc;background:#fff;color:#888;cursor:pointer;}
+.rs-publish-toggle.on{background:#27AE60;color:#fff;border-color:#27AE60;}
+.rs-folder-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;max-width:440px;}
+.rs-folder-bar label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;}
+.rs-folder-bar select{flex:1;padding:8px 10px;border:1.5px solid #E0DDD6;background:#FAFAF8;font-size:13px;color:#222;}
+.rs-wa-head{background:#25D366;color:#fff;padding:8px 12px;font-weight:700;font-size:13px;}
+.rs-wa-wrap{background:#ECE5DD;padding:12px;}
+.rs-wa-bubble{background:#fff;border-radius:10px;padding:8px;box-shadow:0 1px 2px rgba(0,0,0,.1);}
+.rs-wa-bubble img{width:100%;border-radius:6px;margin-bottom:8px;display:block;}
+.rs-wa-bubble p{font-size:13px;white-space:pre-line;margin:0;}
+.rs-gallery{max-width:440px;}
+.rs-gallery-hint{font-size:11px;color:#888;margin-bottom:10px;}
+.rs-gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.rs-gallery-item{position:relative;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:#eee;}
+.rs-gallery-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.rs-gallery-used{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#25D366;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.rs-gen-preview{width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:none;}
+.rs-gen-status{font-size:12px;color:#888;text-align:center;margin-top:8px;min-height:16px;}
+.rs-result-block{background:#F4F1E6;border-left:4px solid #E3A29C;border-radius:6px;padding:12px;margin-bottom:10px;}
+.rs-result-block .rs-rb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.rs-result-block .rs-rb-label{font-size:11px;font-weight:800;text-transform:uppercase;color:#E3A29C;}
+.rs-result-block p{font-size:13px;white-space:pre-line;margin:0;}
+.rs-copy-btn{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;border:1px solid #ccc;background:#F4F1E6;color:#17233F;cursor:pointer;}
+.rs-copy-btn.copied{background:#93ACA7;color:#fff;border-color:#93ACA7;}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-box">
+    <div class="login-title">Bendito Lab</div>
+    <div class="login-sub">Generador de contenido</div>
+    <input type="password" id="pwd" class="login-input" placeholder="••••••" maxlength="40">
+    <button class="login-btn" onclick="checkLogin()">ENTRAR →</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="panel-title">Generador de contenido</div>
+  <div class="panel-desc">Genera copy para Instagram, LinkedIn, WhatsApp y Stories a partir de una imagen de inspiración, con Claude. Bendito Lab (B2B) y Dilo Bonito (B2C). App interna — no visible en la web pública.</div>
+
+  <div class="rs-tabs">
+    <button class="rs-tab active" data-rs-tab="ig">Instagram</button>
+    <button class="rs-tab" data-rs-tab="li">LinkedIn</button>
+    <button class="rs-tab" data-rs-tab="wa">WhatsApp</button>
+    <button class="rs-tab" data-rs-tab="ai">🤖 Generador IA</button>
+    <button class="rs-tab" data-rs-tab="insp">Inspiración</button>
+  </div>
+
+  <div class="rs-folder-bar" id="rs-folder-bar" style="display:none;">
+    <label for="rs-folder-filter">Carpeta</label>
+    <select id="rs-folder-filter"><option value="">Todas las carpetas</option></select>
+  </div>
+
+  <div class="rs-panel active" data-rs-panel="ig"><div class="rs-feed" id="rs-feed-ig"></div></div>
+  <div class="rs-panel" data-rs-panel="li"><div class="rs-feed" id="rs-feed-li"></div></div>
+  <div class="rs-panel" data-rs-panel="wa"><div class="rs-feed" id="rs-feed-wa"></div></div>
+  <div class="rs-panel" data-rs-panel="insp"><div class="rs-gallery" id="rs-gallery"></div></div>
+
+  <div class="rs-panel" data-rs-panel="ai">
+    <div class="card" style="max-width:480px;">
+      <div class="card-title">🤖 Generador con IA</div>
+
+      <div class="field">
+        <label>Cuenta</label>
+        <select id="rs-gen-cuenta">
+          <option value="bendito_lab">Bendito Lab (B2B)</option>
+          <option value="dilobonito">Dilo Bonito (B2C)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Imagen de inspiración</label>
+      </div>
+      <label class="img-btn" for="rs-gen-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir imagen</label>
+      <input type="file" accept="image/*" id="rs-gen-file">
+      <img id="rs-gen-preview" class="rs-gen-preview">
+
+      <div class="field">
+        <label>Prompt</label>
+        <textarea id="rs-gen-prompt" placeholder="Se genera solo al subir la imagen. Puedes editarlo."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Formato principal</label>
+        <select id="rs-gen-formato">
+          <option value="instagram">Post Instagram</option>
+          <option value="linkedin">Post LinkedIn</option>
+          <option value="stories">Stories</option>
+          <option value="whatsapp">Canal de WhatsApp</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Carpeta (opcional)</label>
+        <input type="text" id="rs-gen-carpeta" placeholder="Ej: Boda García, Campaña Navidad…" list="rs-carpetas-list">
+        <datalist id="rs-carpetas-list"></datalist>
+        <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Podrás filtrar por ella en el archivo.</div>
+      </div>
+
+      <button class="save-btn" id="rs-gen-btn" data-action="rs-generate" style="width:100%;">Generar con IA</button>
+      <div class="rs-gen-status" id="rs-gen-status"></div>
+
+      <div id="rs-gen-result" style="display:none;margin-top:20px;padding-top:16px;border-top:1px dashed #E0DDD6;">
+        <div id="rs-gen-blocks"></div>
+
+        <div class="field" style="margin-top:6px;">
+          <label>Logo / marca a superponer (opcional)</label>
+        </div>
+        <label class="img-btn" for="rs-gen-art-file" style="display:inline-block;">📤 Elegir logo</label>
+        <input type="file" accept="image/*" id="rs-gen-art-file">
+        <div class="field-hint" style="margin-top:6px;">Si subes un logo (PNG con fondo transparente recomendado), se superpone en la esquina inferior derecha de la imagen antes de guardar el post. Si no subes nada, se publica con la imagen de inspiración tal cual.</div>
+        <img id="rs-gen-art-preview" class="rs-gen-preview" style="max-height:100px;object-fit:contain;background:#F4F1E6;margin-top:10px;">
+
+        <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:8px;">✓ Guardar en el archivo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/bl-api.js"></script>
+<script>
+async function checkLogin(){
+  var pwd=document.getElementById('pwd').value;
+  var btn=document.querySelector('.login-btn');
+  var err=document.getElementById('login-err');
+  err.style.display='none';
+  if(btn){btn.disabled=true;btn.textContent='Entrando…';}
+  try{
+    var ok=await BL_API.login(pwd);
+    if(ok){
+      document.getElementById('login').style.display='none';
+      document.getElementById('app').style.display='block';
+    }else{
+      err.textContent='Contraseña incorrecta';
+      err.style.display='block';
+      document.getElementById('pwd').value='';
+    }
+  }catch(e){
+    err.textContent='Error de conexión: '+e.message;
+    err.style.display='block';
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='ENTRAR →';}
+  }
+}
+document.getElementById('pwd').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') checkLogin();
+});
+// Si ya hay una sesión válida (token guardado), saltar la pantalla de login.
+if (BL_API.getToken()) {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+</script>
+<script src="/js/generador.js"></script>
+</body>
+</html>

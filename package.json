@@ -1,0 +1,10 @@
+{
+  "name": "generador-de-contenido",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Generador de contenido con IA (Bendito Lab / Dilo Bonito) — app interna, extraída de bendito-lab-canva.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
+    "@vercel/blob": "^2.6.1"
+  }
+}
