@@ -16,7 +16,8 @@
     imageUrl: null,
     inspirationId: null,
     genResult: null,
-    logoInfo: null,     // { dataUrl } del logo a superponer, sin subir todavía
+    logoInfo: null,     // { dataUrl } de la imagen de referencia (logo/texto/dibujo), sin subir todavía
+    iaEditedInfo: null, // { base64, mediaType, dataUrl } de la imagen ya editada con IA, lista para guardar
     allPosts: [],
     folderFilter: '',
   };
@@ -250,36 +251,41 @@
     state.logoInfo = info;
     el('rs-gen-art-preview').src = info.dataUrl;
     el('rs-gen-art-preview').style.display = 'block';
-    setGenStatus('✓ Logo listo — se superpondrá sobre la imagen al guardar.');
   }
 
-  function loadImageEl(src) {
-    return new Promise(function (resolve, reject) {
-      var img = new Image();
-      img.onload = function () { resolve(img); };
-      img.onerror = reject;
-      img.src = src;
-    });
-  }
+  function setIaEditStatus(msg) { el('rs-gen-ia-status').textContent = msg || ''; }
 
-  // Combina la imagen base con el logo (esquina inferior derecha) en un
-  // <canvas> y devuelve el PNG resultante listo para subir.
-  async function composeImageWithLogo(baseDataUrl, logoDataUrl) {
-    var base = await loadImageEl(baseDataUrl);
-    var logo = await loadImageEl(logoDataUrl);
-    var canvas = document.createElement('canvas');
-    canvas.width = base.naturalWidth;
-    canvas.height = base.naturalHeight;
-    var ctx = canvas.getContext('2d');
-    ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
-
-    var margin = canvas.width * 0.04;
-    var logoW = canvas.width * 0.22;
-    var logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
-    ctx.drawImage(logo, canvas.width - logoW - margin, canvas.height - logoH - margin, logoW, logoH);
-
-    var dataUrl = canvas.toDataURL('image/png');
-    return { base64: dataUrl.split(',')[1], mediaType: 'image/png' };
+  async function handleEditarConIA() {
+    var instruccion = el('rs-gen-ia-instruccion').value.trim();
+    if (!state.imageInfo || !instruccion) {
+      setIaEditStatus('Sube la imagen base y escribe qué quieres que integre la IA.');
+      return;
+    }
+    var btn = el('rs-gen-ia-btn');
+    btn.disabled = true; btn.textContent = 'Editando…';
+    setIaEditStatus('Generando la imagen editada… puede tardar unos segundos.');
+    try {
+      var result = await BL_API.benditoPost({
+        accion: 'editarConIA',
+        baseBase64: state.imageInfo.base64,
+        baseMediaType: state.imageInfo.mediaType,
+        refBase64: state.logoInfo ? state.logoInfo.base64 : undefined,
+        refMediaType: state.logoInfo ? state.logoInfo.mediaType : undefined,
+        instruccion: instruccion,
+      });
+      state.iaEditedInfo = {
+        base64: result.base64,
+        mediaType: result.mediaType,
+        dataUrl: 'data:' + result.mediaType + ';base64,' + result.base64,
+      };
+      el('rs-gen-ia-preview').src = state.iaEditedInfo.dataUrl;
+      el('rs-gen-ia-preview').style.display = 'block';
+      setIaEditStatus('✓ Imagen editada — se guardará esta versión.');
+    } catch (err) {
+      setIaEditStatus('Error editando con IA: ' + err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '🪄 Editar con IA';
+    }
   }
 
   async function handleGenerate() {
@@ -336,16 +342,15 @@
     var saveBtn = document.querySelector('[data-action="rs-save-post"]');
 
     var finalImageUrl = state.imageUrl;
-    if (state.logoInfo) {
+    if (state.iaEditedInfo) {
       saveBtn.disabled = true;
-      setGenStatus('Componiendo logo sobre la imagen…');
+      setGenStatus('Subiendo la imagen editada con IA…');
       try {
-        var composed = await composeImageWithLogo(state.imageInfo.dataUrl, state.logoInfo.dataUrl);
-        var up = await BL_API.benditoPost({ accion: 'subirImagen', base64: composed.base64, mediaType: composed.mediaType, filename: 'post-con-logo' });
+        var up = await BL_API.benditoPost({ accion: 'subirImagen', base64: state.iaEditedInfo.base64, mediaType: state.iaEditedInfo.mediaType, filename: 'post-editado-ia' });
         finalImageUrl = up.url;
       } catch (err) {
         saveBtn.disabled = false;
-        setGenStatus('Error al superponer el logo: ' + err.message);
+        setGenStatus('Error al subir la imagen editada: ' + err.message);
         return;
       }
     }
@@ -387,12 +392,16 @@
     state.inspirationId = null;
     state.genResult = null;
     state.logoInfo = null;
+    state.iaEditedInfo = null;
     el('rs-gen-file').value = '';
     el('rs-gen-preview').style.display = 'none';
     el('rs-gen-prompt').value = '';
     el('rs-gen-result').style.display = 'none';
     el('rs-gen-art-file').value = '';
     el('rs-gen-art-preview').style.display = 'none';
+    el('rs-gen-ia-instruccion').value = '';
+    el('rs-gen-ia-preview').style.display = 'none';
+    setIaEditStatus('');
     el('rs-gen-carpeta').value = '';
   }
 
@@ -408,6 +417,7 @@
     el('rs-gen-file').addEventListener('change', handleFileChange);
     el('rs-gen-art-file').addEventListener('change', handleArtFileChange);
     el('rs-gen-btn').addEventListener('click', handleGenerate);
+    el('rs-gen-ia-btn').addEventListener('click', handleEditarConIA);
     document.querySelector('[data-action="rs-save-post"]').addEventListener('click', handleSavePost);
     el('rs-folder-filter').addEventListener('change', function (e) {
       state.folderFilter = e.target.value;

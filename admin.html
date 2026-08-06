@@ -168,14 +168,25 @@ input[type="file"]{display:none;}
         <div id="rs-gen-blocks"></div>
 
         <div class="field" style="margin-top:6px;">
-          <label>Logo / marca a superponer (opcional)</label>
+          <label>Editar imagen con IA (opcional)</label>
+          <textarea id="rs-gen-ia-instruccion" placeholder="Ej: Añade el texto 'Feliz cumpleaños' sobre la taza, integrado con la curvatura y la luz."></textarea>
+          <div class="field-hint">La IA integra el texto/logo/dibujo directamente en la foto (perspectiva, sombras, material) — no lo pega como una pegatina.</div>
         </div>
-        <label class="img-btn" for="rs-gen-art-file" style="display:inline-block;">📤 Elegir logo</label>
+
+        <div class="field">
+          <label>Imagen de referencia del logo/texto/dibujo (opcional)</label>
+        </div>
+        <label class="img-btn" for="rs-gen-art-file" style="display:inline-block;">📤 Elegir imagen de referencia</label>
         <input type="file" accept="image/*" id="rs-gen-art-file">
-        <div class="field-hint" style="margin-top:6px;">Si subes un logo (PNG con fondo transparente recomendado), se superpone en la esquina inferior derecha de la imagen antes de guardar el post. Si no subes nada, se publica con la imagen de inspiración tal cual.</div>
+        <div class="field-hint" style="margin-top:6px;">Opcional — si el texto/logo ya está escrito en la instrucción de arriba no hace falta subir nada aquí.</div>
         <img id="rs-gen-art-preview" class="rs-gen-preview" style="max-height:100px;object-fit:contain;background:#F4F1E6;margin-top:10px;">
 
-        <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:8px;">✓ Guardar en el archivo</button>
+        <button class="save-btn" id="rs-gen-ia-btn" data-action="rs-edit-ia" style="width:100%;margin-top:10px;">🪄 Editar con IA</button>
+        <div class="rs-gen-status" id="rs-gen-ia-status"></div>
+        <img id="rs-gen-ia-preview" class="rs-gen-preview" style="margin-top:10px;">
+
+        <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:14px;">✓ Guardar en el archivo</button>
+        <div class="field-hint" style="margin-top:6px;text-align:center;">Se guarda la imagen editada con IA si has pulsado "Editar con IA"; si no, se publica la imagen de inspiración tal cual.</div>
       </div>
     </div>
   </div>

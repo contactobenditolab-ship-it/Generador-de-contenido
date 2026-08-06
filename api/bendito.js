@@ -11,6 +11,7 @@ const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
 const { callClaudeVisionJSON } = require('../lib/anthropic');
 const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM } = require('../lib/bendito-prompts');
+const { editarImagenConIA } = require('../lib/gemini-image');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
@@ -97,6 +98,15 @@ module.exports = async function handler(req, res) {
           '\n\nGenera el JSON con el copy para los 4 canales, priorizando calidad especialmente en el formato principal solicitado.';
         const result = await callClaudeVisionJSON({ system: COPY_SYSTEM, userText, base64, mediaType, maxTokens: 1000 });
         return res.status(200).json(result);
+      }
+
+      if (accion === 'editarConIA') {
+        const { baseBase64, baseMediaType, refBase64, refMediaType, instruccion } = body;
+        if (!baseBase64 || !baseMediaType || !instruccion) {
+          return res.status(400).json({ error: 'Faltan campos obligatorios (imagen base e instrucción)' });
+        }
+        const result = await editarImagenConIA({ baseBase64, baseMediaType, refBase64, refMediaType, instruccion });
+        return res.status(200).json({ ok: true, ...result });
       }
 
       if (accion === 'crearInspiracion') {
