@@ -334,9 +334,21 @@
       ['Objeto', ficha.objeto], ['Material', ficha.material], ['Color', ficha.color_dominante],
       ['Estilo', ficha.estilo], ['Zona personalizable', ficha.superficie_personalizable], ['Sensación', ficha.sensacion],
     ].filter(function (c) { return c[1]; });
-    if (!campos.length) { box.style.display = 'none'; return; }
-    box.innerHTML = campos.map(function (c) { return '<strong>' + esc(c[0]) + ':</strong> ' + esc(c[1]); }).join(' · ');
+    if (!campos.length && !ficha.prompt_replicar_imagen) { box.style.display = 'none'; return; }
+
+    var html = campos.map(function (c) { return '<strong>' + esc(c[0]) + ':</strong> ' + esc(c[1]); }).join(' · ');
+    if (ficha.prompt_replicar_imagen) {
+      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E0DDD6;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+        '<strong>Prompt para replicar la imagen</strong>' +
+        '<button class="rs-copy-btn" data-copy-text="' + esc(ficha.prompt_replicar_imagen) + '">Copiar</button>' +
+        '</div><span>' + esc(ficha.prompt_replicar_imagen) + '</span></div>';
+    }
+    box.innerHTML = html;
     box.style.display = 'block';
+    box.querySelectorAll('[data-copy-text]').forEach(function (btn) {
+      btn.addEventListener('click', function () { copyToClipboard(btn.dataset.copyText, btn); });
+    });
   }
 
   async function handleArtFileChange(e) {
