@@ -123,6 +123,9 @@
     box.querySelectorAll('[data-usar-variante-url]').forEach(function (img) {
       img.addEventListener('click', function () { usarVarianteComoPortada(img.dataset.usarVarianteId, img.dataset.usarVarianteUrl); });
     });
+    box.querySelectorAll('[data-abrir-ficha-id]').forEach(function (img) {
+      img.addEventListener('click', function () { abrirPostModal(img.dataset.abrirFichaId); });
+    });
   }
 
   async function editarPostImagenEnGenerador(id) {
@@ -251,14 +254,33 @@
       }).join('') + '</div>';
   }
 
+  function fichaVariantesHtml(p) {
+    var variantes = Array.isArray(p.variantes) ? p.variantes : [];
+    if (!variantes.length) return '';
+    var todas = [p.image_url].concat(variantes);
+    return '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">IMÁGENES GUARDADAS (' + todas.length + ')</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+      todas.map(function (url) {
+        return '<img src="' + esc(url) + '" style="width:44px;height:44px;object-fit:cover;border:2px solid var(--ink);' + (url === p.image_url ? 'outline:3px solid var(--blue);' : '') + 'cursor:pointer;" data-usar-variante-id="' + p.id + '" data-usar-variante-url="' + esc(url) + '">';
+      }).join('') + '</div>';
+  }
+
+  // El "ojo" de Bendito Lab como icono de cuenta: azul para Bendito Lab, amarillo para Dilo Bonito.
+  function ojoLogoHtml(cuenta) {
+    var color = cuenta === 'dilobonito' ? 'var(--yellow)' : 'var(--blue)';
+    return '<svg viewBox="0 0 32 32" width="18" height="18" style="color:' + color + ';flex-shrink:0;">' +
+      '<path d="M2 16c3.2-6.2 8.8-9.5 14-9.5S26.8 9.8 30 16c-3.2 6.2-8.8 9.5-14 9.5S5.2 22.2 2 16Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<circle cx="16" cy="16" r="5" fill="currentColor"/></svg>';
+  }
+
   function postCardHtml(channel, p) {
     var del = '<button class="rs-post-del" data-del-id="' + p.id + '">×</button>' +
       '<button class="rs-post-del" style="right:38px;" data-editar-post-id="' + p.id + '" title="Editar imagen con IA">✎</button>';
     if (channel === 'wa') {
       return '<div class="rs-post-card ' + SHADOW_BY_CHANNEL[channel] + '">' + del +
-        '<div class="rs-wa-head">' + esc(p.handle) + ' · Canal de difusión</div>' +
+        '<div class="rs-wa-head" style="display:flex;align-items:center;gap:8px;">' + ojoLogoHtml(p.cuenta) + esc(p.handle) + ' · Canal de difusión</div>' +
         '<div class="rs-wa-wrap"><div class="rs-wa-bubble">' +
-        '<img src="' + esc(p.image_url) + '">' +
+        '<img src="' + esc(p.image_url) + '" data-abrir-ficha-id="' + p.id + '" style="cursor:pointer;">' +
         '<p>' + esc(p.wa_text || '(sin copy de WhatsApp)') + '</p>' +
         '</div></div>' +
         '<div class="rs-post-copy-row"><button class="rs-copy-btn" data-copy-text="' + esc(p.wa_text || '') + '">Copiar copy</button></div>' +
@@ -271,8 +293,8 @@
     var name = isIg ? p.handle : p.li_name;
     var full = (caption || '') + '\n\n' + (hashtags || '');
     return '<div class="rs-post-card ' + SHADOW_BY_CHANNEL[channel] + '">' + del +
-      '<div class="rs-post-head"><span class="' + SHAPE_BY_CHANNEL[channel] + '"></span>' + esc(name) + '</div>' +
-      '<img class="rs-post-img" src="' + esc(p.image_url) + '">' +
+      '<div class="rs-post-head">' + ojoLogoHtml(p.cuenta) + '<span class="' + SHAPE_BY_CHANNEL[channel] + '"></span>' + esc(name) + '</div>' +
+      '<img class="rs-post-img" src="' + esc(p.image_url) + '" data-abrir-ficha-id="' + p.id + '" style="cursor:pointer;">' +
       '<div class="rs-post-body"><p>' + esc(caption) + '</p><p class="rs-post-tags">' + esc(hashtags) + '</p></div>' +
       '<div class="rs-post-copy-row"><button class="rs-copy-btn" data-copy-text="' + esc(full) + '">Copiar copy</button></div>' +
       metaRowHtml(p) + variantesStripHtml(p) +
@@ -586,9 +608,12 @@
       (p.fecha_programada ? '<span class="rs-folder-badge">' + esc(p.fecha_programada) + '</span>' : '') +
       (p.carpeta ? '<span class="rs-folder-badge">' + esc(p.carpeta) + '</span>' : '') +
       '</div>' +
-      (p.ig_caption ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">INSTAGRAM</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.ig_caption) + '</p>' : '') +
-      (p.li_caption ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">LINKEDIN</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.li_caption) + '</p>' : '') +
+      (p.ig_caption ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">INSTAGRAM</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.ig_caption) + (p.ig_hashtags ? '\n\n' + esc(p.ig_hashtags) : '') + '</p>' : '') +
+      (p.li_caption ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">LINKEDIN</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.li_caption) + (p.li_hashtags ? '\n\n' + esc(p.li_hashtags) : '') + '</p>' : '') +
       (p.wa_text ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">WHATSAPP</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.wa_text) + '</p>' : '') +
+      (p.stories_text ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">STORIES</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.stories_text) + '</p>' : '') +
+      (p.prompt_edicion_externa ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">PROMPT DE EDICIÓN GUARDADO</p><p style="font-size:12px;white-space:pre-line;background:var(--paper);border:2px solid var(--ink);padding:8px;">' + esc(p.prompt_edicion_externa) + '</p>' : '') +
+      fichaVariantesHtml(p) +
       metaRowHtml(p) +
       '<div style="display:flex;gap:8px;margin-top:12px;">' +
       '<button class="save-btn" id="cal-modal-editar-btn" style="flex:1;">✎ Editar imagen con IA</button>' +
@@ -601,6 +626,12 @@
     overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrarPostModal(); });
     content.querySelectorAll('[data-publish-id]').forEach(function (btn) {
       btn.addEventListener('click', function () { togglePublicado(btn.dataset.publishId, btn.dataset.publicado !== 'true'); cerrarPostModal(); });
+    });
+    content.querySelectorAll('[data-usar-variante-url]').forEach(function (img) {
+      img.addEventListener('click', function () {
+        usarVarianteComoPortada(img.dataset.usarVarianteId, img.dataset.usarVarianteUrl);
+        cerrarPostModal();
+      });
     });
     el('cal-modal-editar-btn').addEventListener('click', function () {
       cerrarPostModal();
@@ -1093,12 +1124,17 @@
     }
     lista.innerHTML = state.allCarpetas.length
       ? state.allCarpetas.map(function (c) {
-          return '<div class="carpeta-row"><span>' + esc(c.nombre) + '</span>' +
+          var n = state.allPosts.filter(function (p) { return p.carpeta === c.nombre; }).length;
+          return '<div class="carpeta-row">' +
+            '<span data-ver-carpeta="' + esc(c.nombre) + '" style="cursor:pointer;flex:1;">' + esc(c.nombre) + ' <span style="opacity:.5;font-weight:600;">(' + n + ')</span></span>' +
             '<button data-del-carpeta-id="' + c.id + '">Eliminar</button></div>';
         }).join('')
       : '<p class="rs-feed-empty">Todavía no has creado ninguna carpeta.</p>';
     lista.querySelectorAll('[data-del-carpeta-id]').forEach(function (btn) {
       btn.addEventListener('click', function () { eliminarCarpeta(btn.dataset.delCarpetaId); });
+    });
+    lista.querySelectorAll('[data-ver-carpeta]').forEach(function (span) {
+      span.addEventListener('click', function () { verPostsDeCarpeta(span.dataset.verCarpeta); });
     });
 
     var actual = select.value;
@@ -1136,6 +1172,13 @@
     } catch (e) {
       alert('Error al eliminar: ' + e.message);
     }
+  }
+
+  function verPostsDeCarpeta(nombre) {
+    switchTab('ig');
+    state.folderFilter = nombre;
+    el('rs-folder-filter').value = nombre;
+    renderAllFeeds();
   }
 
   // ── AJUSTES ────────────────────────────────────────────
