@@ -347,17 +347,21 @@ input[type="file"]{display:none;}
         <div id="rs-gen-prompt-ext-box" style="display:none;margin-top:10px;background:var(--paper);border:2px solid var(--ink);padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <strong style="font-size:11px;text-transform:uppercase;">Prompt para pegar en otra IA</strong>
-            <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-copy-btn">Copiar</button>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-guardar-btn">💾 Guardar</button>
+              <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-copy-btn">Copiar</button>
+            </div>
           </div>
           <p id="rs-gen-prompt-ext-texto" style="font-size:13px;font-weight:600;white-space:pre-line;margin:0;"></p>
         </div>
 
         <div class="field" style="margin-top:14px;">
-          <label>Subir resultado creado en otra IA (opcional)</label>
+          <label>Subir resultado(s) creado(s) en otra IA (opcional)</label>
         </div>
-        <label class="img-btn" for="rs-gen-resultado-externo-file" style="display:inline-block;">📤 Elegir imagen final</label>
-        <input type="file" accept="image/*" id="rs-gen-resultado-externo-file">
-        <div class="field-hint" style="margin-top:6px;">Si generaste la imagen fuera con el prompt de arriba, súbela aquí para que se guarde en este mismo post junto con la inspiración, el copy y el logo usado.</div>
+        <label class="img-btn" for="rs-gen-resultado-externo-file" style="display:inline-block;">📤 Elegir imagen(es) final(es)</label>
+        <input type="file" accept="image/*" id="rs-gen-resultado-externo-file" multiple>
+        <div class="field-hint" style="margin-top:6px;">Puedes subir varias a la vez y elegir después cuál usar. Se guardará la que esté marcada al pulsar "Guardar en el archivo".</div>
+        <div id="rs-gen-resultados-externos-grid" class="rs-gallery-grid" style="margin-top:8px;"></div>
 
         <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:14px;">✓ Guardar en el archivo</button>
         <div class="field-hint" style="margin-top:6px;text-align:center;">Se guarda la imagen editada con IA o el resultado subido manualmente si has usado alguno de los dos; si no, se publica la imagen de inspiración tal cual.</div>

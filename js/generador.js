@@ -18,6 +18,7 @@
     genResult: null,
     logoInfo: null,     // { dataUrl } de la imagen de referencia (logo/texto/dibujo), sin subir todavía
     iaEditedInfo: null, // { base64, mediaType, dataUrl } de la imagen ya editada con IA, lista para guardar
+    resultadosExternos: [], // [{ base64, mediaType, dataUrl }] resultados subidos manualmente, para elegir cuál usar
     allPosts: [],
     allInspirations: [],
     allLogos: [],
@@ -146,6 +147,10 @@
       el('rs-gen-blocks').innerHTML = '<p class="rs-feed-empty">Editando solo la imagen — el copy actual del post no cambia salvo que pulses "Generar con IA" otra vez.</p>';
       el('rs-gen-result').style.display = 'block';
       renderVariantesPost();
+      if (post.prompt_edicion_externa) {
+        el('rs-gen-prompt-ext-texto').textContent = post.prompt_edicion_externa;
+        el('rs-gen-prompt-ext-box').style.display = 'block';
+      }
       setGenStatus('✓ Editando la imagen de un post existente — usa "🪄 Editar con IA" abajo y luego guarda para actualizarlo.');
     } catch (e) {
       setGenStatus('Error cargando la imagen: ' + e.message);
@@ -446,6 +451,10 @@
       el('rs-gen-prompt').value = insp.prompt || '';
       el('rs-gen-ficha').style.display = 'none';
       el('rs-gen-result').style.display = 'none';
+      if (insp.prompt_edicion_externa) {
+        el('rs-gen-prompt-ext-texto').textContent = insp.prompt_edicion_externa;
+        el('rs-gen-prompt-ext-box').style.display = 'block';
+      }
       if (insp.prompt) {
         setGenStatus('✓ Imagen cargada — revisa el prompt.');
       } else {
@@ -629,8 +638,12 @@
     state.imageInfo = info;
     state.genResult = null;
     state.logoInfo = null;
+    state.iaEditedInfo = null;
+    state.resultadosExternos = [];
     state.editingPostId = null;
     el('rs-post-variantes-box').style.display = 'none';
+    el('rs-gen-prompt-ext-box').style.display = 'none';
+    el('rs-gen-resultados-externos-grid').innerHTML = '';
     el('rs-gen-result').style.display = 'none';
     el('rs-gen-art-file').value = '';
     el('rs-gen-art-preview').style.display = 'none';
@@ -782,14 +795,76 @@
     }
   }
 
+  async function handleGuardarPromptExterno() {
+    var texto = el('rs-gen-prompt-ext-texto').textContent;
+    if (!texto) return;
+    var btn = el('rs-gen-prompt-ext-guardar-btn');
+    btn.disabled = true;
+    try {
+      if (state.editingPostId) {
+        await BL_API.benditoPost({ accion: 'actualizarPost', id: state.editingPostId, prompt_edicion_externa: texto });
+      } else if (state.inspirationId) {
+        await BL_API.benditoPost({ accion: 'actualizarInspiracion', id: state.inspirationId, prompt_edicion_externa: texto });
+      } else {
+        setIaEditStatus('Sube o carga una imagen (que quede guardada como inspiración o post) antes de guardar el prompt.');
+        return;
+      }
+      setIaEditStatus('✓ Prompt guardado — se queda con esta imagen aunque salgas de la página.');
+    } catch (e) {
+      setIaEditStatus('Error guardando el prompt: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   async function handleResultadoExternoChange(e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    var info = await fileToBase64(file);
-    state.iaEditedInfo = { base64: info.base64, mediaType: info.mediaType, dataUrl: info.dataUrl };
-    el('rs-gen-ia-preview').src = info.dataUrl;
+    var files = Array.prototype.slice.call(e.target.files || []);
+    if (!files.length) return;
+    for (var i = 0; i < files.length; i++) {
+      var info = await fileToBase64(files[i]);
+      state.resultadosExternos.push({ base64: info.base64, mediaType: info.mediaType, dataUrl: info.dataUrl });
+    }
+    // La última añadida queda seleccionada por defecto — el usuario puede tocar otra para cambiarla.
+    seleccionarResultadoExterno(state.resultadosExternos.length - 1);
+    el('rs-gen-resultado-externo-file').value = '';
+  }
+
+  function seleccionarResultadoExterno(idx) {
+    var elegido = state.resultadosExternos[idx];
+    if (!elegido) return;
+    state.iaEditedInfo = elegido;
+    el('rs-gen-ia-preview').src = elegido.dataUrl;
     el('rs-gen-ia-preview').style.display = 'block';
-    setIaEditStatus('✓ Resultado externo cargado — se guardará esta versión al pulsar "Guardar en el archivo".');
+    renderResultadosExternos(idx);
+    setIaEditStatus('✓ Resultado externo seleccionado — se guardará esta versión al pulsar "Guardar en el archivo".');
+  }
+
+  function renderResultadosExternos(idxSeleccionado) {
+    var grid = el('rs-gen-resultados-externos-grid');
+    if (!state.resultadosExternos.length) { grid.innerHTML = ''; return; }
+    grid.innerHTML = state.resultadosExternos.map(function (r, idx) {
+      var sel = idx === idxSeleccionado;
+      return '<div class="rs-gallery-item" style="' + (sel ? 'outline:3px solid var(--blue);' : '') + '">' +
+        '<img src="' + r.dataUrl + '" data-elegir-resultado-idx="' + idx + '">' +
+        '<div class="rs-gallery-actions" style="left:auto;right:4px;"><button data-quitar-resultado-idx="' + idx + '" title="Quitar">×</button></div>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('[data-elegir-resultado-idx]').forEach(function (img) {
+      img.addEventListener('click', function () { seleccionarResultadoExterno(Number(img.dataset.elegirResultadoIdx)); });
+    });
+    grid.querySelectorAll('[data-quitar-resultado-idx]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var idx = Number(btn.dataset.quitarResultadoIdx);
+        var eraSeleccionado = state.iaEditedInfo === state.resultadosExternos[idx];
+        state.resultadosExternos.splice(idx, 1);
+        if (eraSeleccionado) {
+          state.iaEditedInfo = null;
+          el('rs-gen-ia-preview').style.display = 'none';
+        }
+        renderResultadosExternos(state.resultadosExternos.indexOf(state.iaEditedInfo));
+      });
+    });
   }
 
   async function handleGenerate() {
@@ -889,6 +964,7 @@
           fecha: 'Generado con IA',
           carpeta: el('rs-gen-carpeta').value.trim() || null,
           fecha_programada: el('rs-gen-fecha').value || null,
+          prompt_edicion_externa: el('rs-gen-prompt-ext-texto').textContent || null,
         };
         await BL_API.benditoPost({ accion: 'crearPost', post: post, inspiration_id: state.inspirationId });
         setGenStatus('✓ Guardado en el archivo.');
@@ -911,6 +987,7 @@
     state.genResult = null;
     state.logoInfo = null;
     state.iaEditedInfo = null;
+    state.resultadosExternos = [];
     state.editingPostId = null;
     el('rs-gen-file').value = '';
     el('rs-gen-preview').style.display = 'none';
@@ -923,6 +1000,7 @@
     el('rs-gen-prompt-ext-box').style.display = 'none';
     el('rs-gen-prompt-ext-texto').textContent = '';
     el('rs-gen-resultado-externo-file').value = '';
+    el('rs-gen-resultados-externos-grid').innerHTML = '';
     setIaEditStatus('');
     el('rs-gen-carpeta').value = '';
     el('rs-gen-fecha').value = '';
@@ -1073,6 +1151,7 @@
     el('rs-gen-btn').addEventListener('click', handleGenerate);
     el('rs-gen-ia-btn').addEventListener('click', handleEditarConIA);
     el('rs-gen-prompt-ext-btn').addEventListener('click', handleGenerarPromptExterno);
+    el('rs-gen-prompt-ext-guardar-btn').addEventListener('click', handleGuardarPromptExterno);
     el('rs-gen-prompt-ext-copy-btn').addEventListener('click', function () {
       copyToClipboard(el('rs-gen-prompt-ext-texto').textContent, el('rs-gen-prompt-ext-copy-btn'));
     });

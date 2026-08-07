@@ -219,12 +219,13 @@ module.exports = async function handler(req, res) {
       }
 
       if (accion === 'actualizarInspiracion') {
-        const { id, prompt, used, drive_uploaded } = body;
+        const { id, prompt, used, drive_uploaded, prompt_edicion_externa } = body;
         if (!id) return res.status(400).json({ error: 'Falta id' });
         const patch = {};
         if (prompt !== undefined) patch.prompt = prompt;
         if (used !== undefined) patch.used = !!used;
         if (drive_uploaded !== undefined) patch.drive_uploaded = !!drive_uploaded;
+        if (prompt_edicion_externa !== undefined) patch.prompt_edicion_externa = prompt_edicion_externa;
         const { data, error } = await supabase.from('inspirations').update(patch).eq('id', id).select().single();
         if (error) throw error;
         return res.status(200).json({ ok: true, data });
@@ -257,6 +258,7 @@ module.exports = async function handler(req, res) {
           fecha: d.fecha || null,
           fecha_programada: d.fecha_programada || null,
           carpeta: d.carpeta ? String(d.carpeta).slice(0, 120) : null,
+          prompt_edicion_externa: d.prompt_edicion_externa || null,
         };
         const { data, error } = await supabase.from('posts').insert(post).select().single();
         if (error) throw error;
@@ -292,6 +294,7 @@ module.exports = async function handler(req, res) {
         if (body.publicado !== undefined) patch.publicado = !!body.publicado;
         if (body.carpeta !== undefined) patch.carpeta = body.carpeta ? String(body.carpeta).slice(0, 120) : null;
         if (body.fecha_programada !== undefined) patch.fecha_programada = body.fecha_programada || null;
+        if (body.prompt_edicion_externa !== undefined) patch.prompt_edicion_externa = body.prompt_edicion_externa;
 
         if (body.image_url !== undefined) {
           // Al cambiar la imagen "portada" de un post ya guardado, la
