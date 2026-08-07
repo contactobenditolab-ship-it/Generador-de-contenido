@@ -152,11 +152,14 @@
       '</div>';
   }
 
+  var SHAPE_BY_CHANNEL = { ig: 'shape-circle', li: 'shape-square', wa: 'shape-triangle' };
+  var SHADOW_BY_CHANNEL = { ig: 'shadow-hard-blue', li: 'shadow-hard-red', wa: 'shadow-hard-yellow' };
+
   function postCardHtml(channel, p) {
     var del = '<button class="rs-post-del" data-del-id="' + p.id + '">×</button>' +
       '<button class="rs-post-del" style="right:38px;" data-editar-post-id="' + p.id + '" title="Editar imagen con IA">✎</button>';
     if (channel === 'wa') {
-      return '<div class="rs-post-card">' + del +
+      return '<div class="rs-post-card ' + SHADOW_BY_CHANNEL[channel] + '">' + del +
         '<div class="rs-wa-head">' + esc(p.handle) + ' · Canal de difusión</div>' +
         '<div class="rs-wa-wrap"><div class="rs-wa-bubble">' +
         '<img src="' + esc(p.image_url) + '">' +
@@ -171,8 +174,8 @@
     var hashtags = isIg ? p.ig_hashtags : p.li_hashtags;
     var name = isIg ? p.handle : p.li_name;
     var full = (caption || '') + '\n\n' + (hashtags || '');
-    return '<div class="rs-post-card">' + del +
-      '<div class="rs-post-head">' + esc(name) + '</div>' +
+    return '<div class="rs-post-card ' + SHADOW_BY_CHANNEL[channel] + '">' + del +
+      '<div class="rs-post-head"><span class="' + SHAPE_BY_CHANNEL[channel] + '"></span>' + esc(name) + '</div>' +
       '<img class="rs-post-img" src="' + esc(p.image_url) + '">' +
       '<div class="rs-post-body"><p>' + esc(caption) + '</p><p class="rs-post-tags">' + esc(hashtags) + '</p></div>' +
       '<div class="rs-post-copy-row"><button class="rs-copy-btn" data-copy-text="' + esc(full) + '">Copiar copy</button></div>' +
@@ -674,13 +677,13 @@
 
   function renderGenResult(r) {
     var blocks = [
-      { label: 'Instagram', value: r.caption_ig + '\n\n' + r.hashtags_ig },
-      { label: 'LinkedIn', value: r.caption_li + '\n\n' + r.hashtags_li },
-      { label: 'WhatsApp', value: r.caption_wa },
-      { label: 'Stories', value: r.stories_text },
+      { label: 'Instagram', value: r.caption_ig + '\n\n' + r.hashtags_ig, shape: 'shape-circle' },
+      { label: 'LinkedIn', value: r.caption_li + '\n\n' + r.hashtags_li, shape: 'shape-square' },
+      { label: 'WhatsApp', value: r.caption_wa, shape: 'shape-triangle' },
+      { label: 'Stories', value: r.stories_text, shape: 'shape-ring' },
     ];
     el('rs-gen-blocks').innerHTML = blocks.map(function (b) {
-      return '<div class="rs-result-block"><div class="rs-rb-head"><span class="rs-rb-label">' + esc(b.label) +
+      return '<div class="rs-result-block"><div class="rs-rb-head"><span class="rs-rb-label"><span class="' + b.shape + '"></span>' + esc(b.label) +
         '</span><button class="rs-copy-btn" data-copy-text="' + esc(b.value) + '">Copiar</button></div>' +
         '<p>' + esc(b.value) + '</p></div>';
     }).join('');
