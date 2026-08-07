@@ -5,6 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Generador de contenido · Bendito Lab</title>
+<link rel="icon" id="favicon" type="image/svg+xml" href="">
+<script>
+// Favicon del ojo con rayos: azul (Bendito Lab) por defecto, amarillo
+// cuando se elige Dilo Bonito en el Generador IA. Recreado a mano (no hay
+// SVG del diseño original en el repo, solo se pasó como imagen).
+function actualizarFavicon(cuenta) {
+  var color = cuenta === 'dilobonito' ? '#F0B429' : '#1D4FA0';
+  var rayos = '';
+  for (var i = 0; i < 16; i++) {
+    var ang = (Math.PI * 2 * i) / 16;
+    var largo = i % 2 === 0 ? 13 : 8;
+    var rIn = 15, rOut = rIn + largo;
+    var x1 = (32 + Math.cos(ang) * rIn).toFixed(1), y1 = (32 + Math.sin(ang) * rIn).toFixed(1);
+    var x2 = (32 + Math.cos(ang) * rOut).toFixed(1), y2 = (32 + Math.sin(ang) * rOut).toFixed(1);
+    rayos += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + color + '" stroke-width="3" stroke-linecap="round"/>';
+  }
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    '<rect width="64" height="64" fill="#F2EFE6"/>' + rayos +
+    '<path d="M14 32C20 24 26 20 32 20S44 24 50 32C44 40 38 44 32 44S20 40 14 32Z" fill="#fff" stroke="' + color + '" stroke-width="3" stroke-linejoin="round"/>' +
+    '<circle cx="32" cy="32" r="8" fill="' + color + '"/>' +
+    '<circle cx="34.5" cy="29" r="2.2" fill="#fff"/>' +
+    '<circle cx="30.5" cy="32.5" r="1" fill="#fff"/>' +
+    '</svg>';
+  document.getElementById('favicon').href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+actualizarFavicon('bendito_lab');
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 /* Estilo Bauhaus: paleta Kandinsky (rojo=cuadrado, amarillo=triángulo,

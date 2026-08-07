@@ -146,6 +146,7 @@
       el('rs-gen-ficha').style.display = 'none';
       el('rs-gen-result').style.display = 'none';
       el('rs-gen-cuenta').value = post.cuenta;
+      if (window.actualizarFavicon) window.actualizarFavicon(post.cuenta);
       el('rs-gen-carpeta').value = post.carpeta || '';
       el('rs-gen-fecha').value = post.fecha_programada || '';
       el('rs-gen-blocks').innerHTML = '<p class="rs-feed-empty">Editando solo la imagen — el copy actual del post no cambia salvo que pulses "Generar con IA" otra vez.</p>';
@@ -1308,6 +1309,9 @@
     el('rs-gen-file').addEventListener('change', handleFileChange);
     el('rs-gen-art-file').addEventListener('change', handleArtFileChange);
     el('rs-gen-btn').addEventListener('click', handleGenerate);
+    el('rs-gen-cuenta').addEventListener('change', function (e) {
+      if (window.actualizarFavicon) window.actualizarFavicon(e.target.value);
+    });
     el('rs-gen-ia-btn').addEventListener('click', handleEditarConIA);
     el('rs-gen-prompt-ext-btn').addEventListener('click', handleGenerarPromptExterno);
     el('rs-gen-prompt-ext-guardar-btn').addEventListener('click', handleGuardarPromptExterno);
