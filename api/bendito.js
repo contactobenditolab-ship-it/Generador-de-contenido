@@ -14,7 +14,7 @@ const { DIRECCION_CREATIVA_DEFAULT, promptSugerirSystem, copySystem, promptEdici
 const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
 const { generarPdfFinal, generarPdfPendiente } = require('../lib/pdf-post');
-const { subirPdfAContenido } = require('../lib/google-drive');
+const { subirPdfAContenido, subirArchivoAContenido } = require('../lib/google-drive');
 const { listarTableros: listarTablerosPinterest, sincronizarPinesNuevos: sincronizarPinesPinterest } = require('../lib/pinterest');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
@@ -54,6 +54,7 @@ async function subirImagen(body) {
 }
 
 const MEDIA_TYPE_BY_CONTENT_TYPE = { 'image/png': 'image/png', 'image/jpeg': 'image/jpeg', 'image/webp': 'image/webp', 'image/gif': 'image/gif' };
+const EXT_BY_MEDIA_TYPE = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
 
 /** Descarga una imagen ya subida (p.ej. un logo guardado) y la devuelve en base64, para pasársela a Gemini. */
 async function descargarImagenBase64(url) {
@@ -281,6 +282,17 @@ module.exports = async function handler(req, res) {
           .insert({ nombre: String(nombre || 'Sin nombre').slice(0, 120), image_url: subido.url, image_hash: image_hash || null })
           .select().single();
         if (error) throw error;
+
+        // Copia también en Drive (Contenido/Logos) — si Drive no está
+        // conectado o falla, no bloquea el guardado del logo.
+        try {
+          const ext = EXT_BY_MEDIA_TYPE[procesado.mediaType] || 'png';
+          const nombreArchivo = String(nombre || 'logo').replace(/[^a-zA-Z0-9_\- ]+/g, '').trim() + '.' + ext;
+          await subirArchivoAContenido(nombreArchivo, Buffer.from(procesado.base64, 'base64'), 'Logos', procesado.mediaType);
+        } catch (e) {
+          console.error('No se pudo subir el logo a Drive:', e.message);
+        }
+
         return res.status(200).json({ ok: true, data });
       }
 
@@ -328,6 +340,18 @@ module.exports = async function handler(req, res) {
         }
         const { data, error } = await supabase.from('inspirations').insert({ image_url, prompt: prompt || null, image_hash: image_hash || null }).select().single();
         if (error) throw error;
+
+        // Copia también en Drive (Contenido/Inspiración) — si Drive no
+        // está conectado o falla, no bloquea el guardado de la imagen.
+        try {
+          const descargada = await descargarImagenBase64(image_url);
+          const ext = EXT_BY_MEDIA_TYPE[descargada.mediaType] || 'png';
+          await subirArchivoAContenido('inspiracion-' + data.id + '.' + ext, Buffer.from(descargada.base64, 'base64'), 'Inspiración', descargada.mediaType);
+          await supabase.from('inspirations').update({ drive_uploaded: true }).eq('id', data.id);
+        } catch (e) {
+          console.error('No se pudo subir la imagen de inspiración a Drive:', e.message);
+        }
+
         return res.status(200).json({ ok: true, data });
       }
 
