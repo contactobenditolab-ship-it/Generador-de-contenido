@@ -10,7 +10,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
 const { callGeminiVisionJSON } = require('../lib/gemini-text');
-const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM, PROMPT_EDICION_EXTERNA_SYSTEM } = require('../lib/bendito-prompts');
+const { DIRECCION_CREATIVA_DEFAULT, promptSugerirSystem, copySystem, promptEdicionExternaSystem } = require('../lib/bendito-prompts');
 const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
 
@@ -26,6 +26,12 @@ function db() {
   if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY no configuradas');
   cachedClient = createClient(url, key, { auth: { persistSession: false } });
   return cachedClient;
+}
+
+/** Dirección creativa activa: la guardada en Ajustes, o si no hay ninguna, la de por defecto. */
+async function obtenerDireccionCreativa(supabase) {
+  const { data } = await supabase.from('configuracion_generador').select('direccion_creativa').eq('id', 1).maybeSingle();
+  return (data && data.direccion_creativa) ? data.direccion_creativa : DIRECCION_CREATIVA_DEFAULT;
 }
 
 async function subirImagen(body) {
@@ -84,6 +90,10 @@ module.exports = async function handler(req, res) {
         if (error) throw error;
         return res.status(200).json({ data: data || [] });
       }
+      if (tipo === 'configuracion') {
+        const direccionCreativa = await obtenerDireccionCreativa(supabase);
+        return res.status(200).json({ direccion_creativa: direccionCreativa, es_valor_por_defecto: direccionCreativa === DIRECCION_CREATIVA_DEFAULT });
+      }
       return res.status(400).json({ error: 'tipo desconocido' });
     }
 
@@ -104,8 +114,9 @@ module.exports = async function handler(req, res) {
       if (accion === 'sugerirPrompt') {
         const { base64, mediaType } = body;
         if (!base64 || !mediaType) return res.status(400).json({ error: 'Falta base64 o mediaType' });
+        const direccionCreativa = await obtenerDireccionCreativa(supabase);
         const result = await callGeminiVisionJSON({
-          system: PROMPT_SUGGEST_SYSTEM,
+          system: promptSugerirSystem(direccionCreativa),
           userText: 'Genera la ficha estructurada y el prompt sugerido para esta imagen.',
           base64, mediaType, maxTokens: 500,
         });
@@ -115,11 +126,12 @@ module.exports = async function handler(req, res) {
       if (accion === 'generarCopy') {
         const { base64, mediaType, prompt, cuenta, formato } = body;
         if (!base64 || !mediaType || !prompt) return res.status(400).json({ error: 'Faltan campos obligatorios' });
+        const direccionCreativa = await obtenerDireccionCreativa(supabase);
         const userText = 'Cuenta: ' + (cuenta === 'dilobonito' ? 'Dilo Bonito' : 'Bendito Lab') +
           '\nFormato principal solicitado: ' + formato +
           '\nPrompt del usuario: ' + prompt +
           '\n\nGenera el JSON con el copy para los 4 canales, priorizando calidad especialmente en el formato principal solicitado.';
-        const result = await callGeminiVisionJSON({ system: COPY_SYSTEM, userText, base64, mediaType, maxTokens: 1000 });
+        const result = await callGeminiVisionJSON({ system: copySystem(direccionCreativa), userText, base64, mediaType, maxTokens: 1000 });
         return res.status(200).json(result);
       }
 
@@ -133,7 +145,8 @@ module.exports = async function handler(req, res) {
           refBase64 = descargada.base64;
           refMediaType = descargada.mediaType;
         }
-        const result = await editarImagenConIA({ baseBase64, baseMediaType, refBase64, refMediaType, instruccion });
+        const direccionCreativa = await obtenerDireccionCreativa(supabase);
+        const result = await editarImagenConIA({ baseBase64, baseMediaType, refBase64, refMediaType, instruccion, direccionCreativa });
         return res.status(200).json({ ok: true, ...result });
       }
 
@@ -147,10 +160,11 @@ module.exports = async function handler(req, res) {
           refBase64 = descargada.base64;
           refMediaType = descargada.mediaType;
         }
+        const direccionCreativa = await obtenerDireccionCreativa(supabase);
         const userText = 'Instrucción del usuario sobre qué integrar/cambiar: ' + instruccion +
           (refBase64 ? '\n\nLa segunda imagen adjunta es la referencia del logo/texto/dibujo a integrar.' : '');
         const result = await callGeminiVisionJSON({
-          system: PROMPT_EDICION_EXTERNA_SYSTEM,
+          system: promptEdicionExternaSystem(direccionCreativa),
           userText,
           base64: baseBase64,
           mediaType: baseMediaType,
@@ -158,6 +172,16 @@ module.exports = async function handler(req, res) {
           maxTokens: 800,
         });
         return res.status(200).json(result);
+      }
+
+      if (accion === 'guardarConfiguracion') {
+        const direccionCreativa = typeof body.direccion_creativa === 'string' ? body.direccion_creativa.trim() : '';
+        const { data, error } = await supabase
+          .from('configuracion_generador')
+          .upsert({ id: 1, direccion_creativa: direccionCreativa || null, updated_at: new Date().toISOString() })
+          .select().single();
+        if (error) throw error;
+        return res.status(200).json({ ok: true, data });
       }
 
       if (accion === 'subirLogo') {

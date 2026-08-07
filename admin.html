@@ -155,6 +155,7 @@ input[type="file"]{display:none;}
 
 <div id="login">
   <div class="login-box">
+    <img src="https://www.benditolab.com/logo-bendito.png" alt="Bendito Lab" style="height:36px;margin-bottom:16px;" onerror="this.style.display='none';">
     <div class="login-title">Bendito Lab</div>
     <div class="login-sub">Generador de contenido</div>
     <input type="password" id="pwd" class="login-input" placeholder="••••••" maxlength="40">
@@ -164,7 +165,8 @@ input[type="file"]{display:none;}
 </div>
 
 <div id="app">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+    <img src="https://www.benditolab.com/logo-bendito.png" alt="Bendito Lab" style="height:28px;" onerror="this.style.display='none';">
     <span class="shape-square-lg"></span><span class="shape-triangle-lg"></span><span class="shape-circle-lg"></span>
   </div>
   <div class="panel-title">Generador de contenido</div>
@@ -180,6 +182,7 @@ input[type="file"]{display:none;}
     <button class="rs-tab" data-rs-tab="logos">🖼️ Logos</button>
     <button class="rs-tab" data-rs-tab="carpetas">📁 Carpetas</button>
     <button class="rs-tab" data-rs-tab="ayuda">❓ Cómo funciona</button>
+    <button class="rs-tab" data-rs-tab="ajustes">⚙️ Ajustes</button>
   </div>
 
   <div class="rs-folder-bar" id="rs-folder-bar" style="display:none;">
@@ -290,6 +293,21 @@ input[type="file"]{display:none;}
         <p><strong>Variantes de imagen</strong><br>
         Cada post puede guardar varias imágenes (no solo la portada). Desde la tarjeta del post en el feed, el botón "🖼️ Variantes" te deja cambiar la portada al instante; desde ✎ "Editar imagen con IA" puedes añadir variantes nuevas o elegir cuál usar como base para seguir trabajando.</p>
       </div>
+    </div>
+  </div>
+
+  <div class="rs-panel" data-rs-panel="ajustes">
+    <div class="card" style="max-width:720px;">
+      <div class="card-title">⚙️ Dirección creativa para la IA</div>
+      <div class="field-hint" style="margin-bottom:12px;">Esto es lo que la IA lee antes de sugerir un prompt, generar el copy o escribir el prompt de edición de imagen. Edítalo para cambiar las directrices sin tener que tocar código — se aplica a partir de la siguiente vez que generes algo.</div>
+      <div class="field">
+        <textarea id="ajustes-direccion-creativa" style="min-height:420px;font-family:monospace;font-size:12px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="save-btn" id="ajustes-guardar-btn" style="flex:1;">💾 Guardar</button>
+        <button class="save-btn" id="ajustes-restaurar-btn" style="flex:1;background:#fff;">↺ Restaurar valor por defecto</button>
+      </div>
+      <div class="rs-gen-status" id="ajustes-status"></div>
     </div>
   </div>
 

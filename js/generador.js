@@ -52,6 +52,7 @@
     loadGallery();
     loadLogos();
     loadCarpetas();
+    loadAjustes();
   }
 
   // ── FEEDS (IG / LI / WA) ──────────────────────────────
@@ -1137,6 +1138,47 @@
     }
   }
 
+  // ── AJUSTES ────────────────────────────────────────────
+  async function loadAjustes() {
+    try {
+      var d = await BL_API.benditoGet('configuracion');
+      el('ajustes-direccion-creativa').value = d.direccion_creativa || '';
+    } catch (e) {
+      el('ajustes-status').textContent = 'Error cargando la configuración: ' + e.message;
+    }
+  }
+
+  async function handleGuardarAjustes() {
+    var texto = el('ajustes-direccion-creativa').value.trim();
+    var btn = el('ajustes-guardar-btn');
+    btn.disabled = true;
+    el('ajustes-status').textContent = 'Guardando…';
+    try {
+      await BL_API.benditoPost({ accion: 'guardarConfiguracion', direccion_creativa: texto });
+      el('ajustes-status').textContent = '✓ Guardado — se aplica desde la próxima vez que generes algo.';
+    } catch (e) {
+      el('ajustes-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function handleRestaurarAjustes() {
+    if (!confirm('¿Restaurar la dirección creativa por defecto? Se perderán los cambios que hayas hecho aquí.')) return;
+    var btn = el('ajustes-restaurar-btn');
+    btn.disabled = true;
+    el('ajustes-status').textContent = 'Restaurando…';
+    try {
+      await BL_API.benditoPost({ accion: 'guardarConfiguracion', direccion_creativa: '' });
+      await loadAjustes();
+      el('ajustes-status').textContent = '✓ Restaurado el valor por defecto.';
+    } catch (e) {
+      el('ajustes-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ── WIRING ─────────────────────────────────────────────
   // ensureLoaded() NO se llama aquí: en DOMContentLoaded todavía no hay
   // sesión (la pantalla de login está encima). admin.html llama a
@@ -1161,6 +1203,8 @@
     el('logo-subir-btn').addEventListener('click', handleSubirLogo);
     el('carpeta-crear-btn').addEventListener('click', handleCrearCarpeta);
     el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
+    el('ajustes-guardar-btn').addEventListener('click', handleGuardarAjustes);
+    el('ajustes-restaurar-btn').addEventListener('click', handleRestaurarAjustes);
     el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
     el('cal-mes-next').addEventListener('click', function () { cambiarMesCalendario(1); });
     el('insp-bulk-file').addEventListener('change', handleBulkUpload);
