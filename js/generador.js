@@ -341,7 +341,14 @@
       el('rs-gen-prompt').value = insp.prompt || '';
       el('rs-gen-ficha').style.display = 'none';
       el('rs-gen-result').style.display = 'none';
-      setGenStatus(insp.prompt ? '✓ Imagen cargada — revisa el prompt.' : 'Imagen cargada — escribe o genera el prompt.');
+      if (insp.prompt) {
+        setGenStatus('✓ Imagen cargada — revisa el prompt.');
+      } else {
+        // Las imágenes subidas por lotes (Inspiración → Subir varias
+        // imágenes) se guardan sin analizar — se genera ahora, sin tener
+        // que volver a subir el archivo.
+        await analizarImagenActual();
+      }
     } catch (e) {
       setGenStatus('Error cargando la imagen: ' + e.message);
     }
@@ -533,16 +540,38 @@
       var insp = await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url });
       state.inspirationId = insp.data.id;
 
-      setGenStatus('Analizando imagen…');
-      var ficha = await BL_API.benditoPost({ accion: 'sugerirPrompt', base64: info.base64, mediaType: info.mediaType });
+      await analizarImagenActual();
+    } catch (err) {
+      setGenStatus('Error: ' + err.message);
+    }
+  }
+
+  /**
+   * Analiza state.imageInfo con IA (ficha + prompt sugerido) y lo guarda en
+   * la inspiración actual (state.inspirationId) si hay una. Reutilizable
+   * tanto al subir una imagen nueva como desde el botón "🔄 Sugerir prompt"
+   * — necesario porque las imágenes subidas por lotes (Inspiración → Subir
+   * varias imágenes) se guardan sin pasar por este análisis, así que si no,
+   * la única forma de generarlo era volver a subir el archivo entero.
+   */
+  async function analizarImagenActual() {
+    if (!state.imageInfo) {
+      setGenStatus('Sube o carga una imagen primero.');
+      return;
+    }
+    setGenStatus('Analizando imagen…');
+    try {
+      var ficha = await BL_API.benditoPost({ accion: 'sugerirPrompt', base64: state.imageInfo.base64, mediaType: state.imageInfo.mediaType });
       if (ficha.prompt_sugerido) {
         el('rs-gen-prompt').value = ficha.prompt_sugerido;
-        await BL_API.benditoPost({ accion: 'actualizarInspiracion', id: state.inspirationId, prompt: ficha.prompt_sugerido });
+        if (state.inspirationId) {
+          await BL_API.benditoPost({ accion: 'actualizarInspiracion', id: state.inspirationId, prompt: ficha.prompt_sugerido });
+        }
       }
       renderFichaImagen(ficha);
       setGenStatus('✓ Prompt sugerido — edítalo si quieres.');
     } catch (err) {
-      setGenStatus('Error: ' + err.message);
+      setGenStatus('Error analizando la imagen: ' + err.message);
     }
   }
 
@@ -899,6 +928,7 @@
     el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
     el('cal-mes-next').addEventListener('click', function () { cambiarMesCalendario(1); });
     el('insp-bulk-file').addEventListener('change', handleBulkUpload);
+    el('rs-gen-reanalizar-btn').addEventListener('click', analizarImagenActual);
     el('rs-gen-logo-select').addEventListener('change', function (e) {
       if (e.target.value) {
         state.logoInfo = null; // solo una fuente de logo a la vez
