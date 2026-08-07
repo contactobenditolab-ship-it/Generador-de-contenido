@@ -11,7 +11,7 @@ const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
 const { callGeminiVisionJSON } = require('../lib/gemini-text');
 const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM } = require('../lib/bendito-prompts');
-const { editarImagenConIA } = require('../lib/gemini-image');
+const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
@@ -140,7 +140,18 @@ module.exports = async function handler(req, res) {
       if (accion === 'subirLogo') {
         const { base64, mediaType, nombre } = body;
         if (!base64 || !mediaType) return res.status(400).json({ error: 'Falta la imagen del logo' });
-        const subido = await subirImagen({ base64, mediaType, filename: 'logo-' + (nombre || 'sin-nombre') });
+
+        // Fondo transparente siempre: si ya lo tiene, la IA la devuelve
+        // igual; si no, se lo quita. Si la IA falla (cuota, etc.) no se
+        // bloquea el guardado — se sube la imagen original tal cual.
+        let procesado = { base64, mediaType };
+        try {
+          procesado = await asegurarFondoTransparente(base64, mediaType);
+        } catch (e) {
+          console.error('No se pudo asegurar el fondo transparente del logo, se sube tal cual:', e.message);
+        }
+
+        const subido = await subirImagen({ base64: procesado.base64, mediaType: procesado.mediaType, filename: 'logo-' + (nombre || 'sin-nombre') });
         const { data, error } = await supabase
           .from('logos')
           .insert({ nombre: String(nombre || 'Sin nombre').slice(0, 120), image_url: subido.url })

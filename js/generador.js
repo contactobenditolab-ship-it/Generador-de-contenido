@@ -752,7 +752,7 @@
     }
     var btn = el('logo-subir-btn');
     btn.disabled = true;
-    el('logo-status').textContent = 'Guardando…';
+    el('logo-status').textContent = 'Procesando fondo transparente y guardando… puede tardar unos segundos.';
     try {
       await BL_API.benditoPost({ accion: 'subirLogo', base64: logoParaSubir.base64, mediaType: logoParaSubir.mediaType, nombre: nombre });
       el('logo-nombre').value = '';
