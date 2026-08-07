@@ -229,6 +229,14 @@ input[type="file"]{display:none;}
     <label class="img-btn" for="insp-bulk-file" style="display:inline-block;margin-bottom:6px;">📤 Subir varias imágenes</label>
     <input type="file" accept="image/*" id="insp-bulk-file" multiple>
     <div class="rs-gen-status" id="insp-bulk-status" style="text-align:left;"></div>
+
+    <div style="display:flex;gap:8px;margin-top:12px;max-width:520px;">
+      <input type="text" id="insp-url" placeholder="Pega aquí el enlace directo a una imagen de Pinterest…" style="flex:1;padding:9px 12px;border:2px solid var(--ink);background:var(--paper);font-family:'Archivo',Arial,sans-serif;font-weight:600;font-size:13px;color:var(--ink);">
+      <button class="img-btn" id="insp-url-btn" style="margin:0;">Añadir</button>
+    </div>
+    <div class="field-hint" style="max-width:520px;margin-top:4px;">En Pinterest: pulsa la imagen a tamaño completo → botón derecho → "Copiar dirección de la imagen" (no el enlace del pin).</div>
+    <div class="rs-gen-status" id="insp-url-status" style="text-align:left;"></div>
+
     <div class="rs-gallery" id="rs-gallery" style="margin-top:10px;"></div>
   </div>
 
@@ -353,8 +361,11 @@ input[type="file"]{display:none;}
         <p><strong>📌 Pinterest → Inspiración</strong><br>
         En ⚙️ Ajustes puedes conectar un tablón de Pinterest. Una vez conectado y elegido el tablón, los pines nuevos que guardes ahí se traen solos a Inspiración una vez al día (también puedes pulsar "Sincronizar ahora" para forzarlo en el momento).</p>
 
+        <p><strong>Añadir inspiración por enlace</strong><br>
+        En 🖼️ Inspiración, pega el enlace directo a una imagen (por ejemplo de Pinterest: pulsa la imagen a tamaño completo → botón derecho → "Copiar dirección de la imagen") y pulsa "Añadir" — la descarga y guarda igual que si la hubieras subido a mano, sin necesidad de descargarla tú antes.</p>
+
         <p><strong>Sin duplicados en Inspiración</strong><br>
-        Al subir una imagen (una a una o en bloque con "📤 Subir varias imágenes") se calcula un identificador único del archivo. Si ya la habías subido antes, no se vuelve a guardar — se reutiliza la que ya existía.</p>
+        Al subir una imagen (una a una, en bloque con "📤 Subir varias imágenes" o por enlace) se calcula un identificador único del archivo. Si ya la habías subido antes, no se vuelve a guardar — se reutiliza la que ya existía.</p>
       </div>
     </div>
   </div>

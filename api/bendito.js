@@ -6,6 +6,7 @@
 // endpoint (posts, inspiraciones, subida de imagen a Blob, sugerencia de
 // prompt y generación de copy con Claude) para no pasar del límite de
 // Serverless Functions del plan — mismo criterio que api/db.js.
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
@@ -329,6 +330,39 @@ module.exports = async function handler(req, res) {
         const { data, error } = await supabase.from('inspirations').select('id, image_url').eq('image_hash', image_hash).maybeSingle();
         if (error) throw error;
         return res.status(200).json({ existe: !!data, data: data || null });
+      }
+
+      if (accion === 'crearInspiracionDesdeUrl') {
+        const { url, prompt } = body;
+        if (!url) return res.status(400).json({ error: 'Falta la URL de la imagen' });
+
+        let descargada;
+        try {
+          descargada = await descargarImagenBase64(url);
+        } catch (e) {
+          return res.status(400).json({ error: 'No se pudo descargar esa imagen (¿el enlace es directo a la imagen, no a la página de Pinterest?): ' + e.message });
+        }
+        const hash = crypto.createHash('sha256').update(Buffer.from(descargada.base64, 'base64')).digest('hex');
+
+        const { data: existente } = await supabase.from('inspirations').select('id, image_url').eq('image_hash', hash).maybeSingle();
+        if (existente) return res.status(200).json({ ok: true, duplicado: true, data: existente });
+
+        const subido = await subirImagen({ base64: descargada.base64, mediaType: descargada.mediaType, filename: 'pinterest-url' });
+        const { data, error } = await supabase
+          .from('inspirations')
+          .insert({ image_url: subido.url, prompt: prompt || null, image_hash: hash })
+          .select().single();
+        if (error) throw error;
+
+        try {
+          const ext = EXT_BY_MEDIA_TYPE[descargada.mediaType] || 'jpg';
+          await subirArchivoAContenido('inspiracion-' + data.id + '.' + ext, Buffer.from(descargada.base64, 'base64'), 'Inspiración', descargada.mediaType);
+          await supabase.from('inspirations').update({ drive_uploaded: true }).eq('id', data.id);
+        } catch (e) {
+          console.error('No se pudo subir la imagen de inspiración a Drive:', e.message);
+        }
+
+        return res.status(200).json({ ok: true, data });
       }
 
       if (accion === 'crearInspiracion') {

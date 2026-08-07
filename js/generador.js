@@ -578,6 +578,30 @@
     loadGallery();
   }
 
+  async function handleAgregarInspiracionPorUrl() {
+    var input = el('insp-url');
+    var url = input.value.trim();
+    if (!url) return;
+    var btn = el('insp-url-btn');
+    var statusEl = el('insp-url-status');
+    btn.disabled = true;
+    statusEl.textContent = 'Descargando imagen…';
+    try {
+      var res = await BL_API.benditoPost({ accion: 'crearInspiracionDesdeUrl', url: url });
+      if (res.duplicado) {
+        statusEl.textContent = 'Esa imagen ya estaba guardada en Inspiración — no se duplica.';
+      } else {
+        statusEl.textContent = '✓ Imagen añadida a Inspiración.';
+        input.value = '';
+      }
+      loadGallery();
+    } catch (e) {
+      statusEl.textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   async function eliminarInspiracion(id) {
     if (!confirm('¿Eliminar esta imagen de inspiración? No se puede deshacer.')) return;
     try {
@@ -1631,6 +1655,8 @@
     el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
     el('cal-mes-next').addEventListener('click', function () { cambiarMesCalendario(1); });
     el('insp-bulk-file').addEventListener('change', handleBulkUpload);
+    el('insp-url-btn').addEventListener('click', handleAgregarInspiracionPorUrl);
+    el('insp-url').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleAgregarInspiracionPorUrl(); });
     el('rs-gen-reanalizar-btn').addEventListener('click', analizarImagenActual);
     document.querySelector('[data-action="rs-save-post"]').addEventListener('click', handleSavePost);
     el('rs-folder-filter').addEventListener('change', function (e) {
