@@ -98,9 +98,9 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ direccion_creativa: direccionCreativa, es_valor_por_defecto: direccionCreativa === DIRECCION_CREATIVA_DEFAULT });
       }
       if (tipo === 'pinterest_estado') {
-        const { data } = await supabase.from('pinterest_auth').select('refresh_token, board_id, board_nombre, last_sync_at').eq('id', 1).maybeSingle();
+        const { data } = await supabase.from('pinterest_auth').select('access_token, refresh_token, board_id, board_nombre, last_sync_at').eq('id', 1).maybeSingle();
         return res.status(200).json({
-          conectado: !!(data && data.refresh_token),
+          conectado: !!(data && (data.access_token || data.refresh_token)),
           board_id: data?.board_id || null,
           board_nombre: data?.board_nombre || null,
           last_sync_at: data?.last_sync_at || null,
@@ -194,6 +194,16 @@ module.exports = async function handler(req, res) {
           .select().single();
         if (error) throw error;
         return res.status(200).json({ ok: true, data });
+      }
+
+      if (accion === 'guardarTokenPinterest') {
+        const accessToken = typeof body.access_token === 'string' ? body.access_token.trim() : '';
+        if (!accessToken) return res.status(400).json({ error: 'Falta access_token' });
+        const { error } = await supabase.from('pinterest_auth').upsert({
+          id: 1, access_token: accessToken, updated_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
       }
 
       if (accion === 'listarTablerosPinterest') {

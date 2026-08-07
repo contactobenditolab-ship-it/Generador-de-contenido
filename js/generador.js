@@ -1350,6 +1350,24 @@
     }
   }
 
+  async function handleGuardarTokenManualPinterest() {
+    var token = el('pinterest-token-manual').value.trim();
+    if (!token) return;
+    var btn = el('pinterest-guardar-token-btn');
+    btn.disabled = true;
+    el('pinterest-status').textContent = 'Guardando token…';
+    try {
+      await BL_API.benditoPost({ accion: 'guardarTokenPinterest', access_token: token });
+      el('pinterest-token-manual').value = '';
+      el('pinterest-status').textContent = '✓ Token guardado — elige ahora el tablón a sincronizar.';
+      await loadPinterestEstado();
+    } catch (e) {
+      el('pinterest-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   async function handleGuardarTableroPinterest() {
     var select = el('pinterest-tablero-select');
     var boardId = select.value;
@@ -1414,6 +1432,7 @@
     el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
     el('ajustes-guardar-btn').addEventListener('click', handleGuardarAjustes);
     el('ajustes-restaurar-btn').addEventListener('click', handleRestaurarAjustes);
+    el('pinterest-guardar-token-btn').addEventListener('click', handleGuardarTokenManualPinterest);
     el('pinterest-guardar-tablero-btn').addEventListener('click', handleGuardarTableroPinterest);
     el('pinterest-sincronizar-btn').addEventListener('click', handleSincronizarPinterestAhora);
     el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
