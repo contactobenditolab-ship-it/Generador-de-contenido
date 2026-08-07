@@ -343,28 +343,112 @@
       input.addEventListener('change', function () { asignarFecha(input.dataset.assignFechaId, input.value); });
     });
 
-    var conFecha = state.allPosts.filter(function (p) { return p.fecha_programada; })
-      .sort(function (a, b) { return a.fecha_programada < b.fecha_programada ? -1 : 1; });
+    renderCalGrid();
+  }
 
-    if (!conFecha.length) {
-      agBox.innerHTML = '<p class="rs-feed-empty">No hay posts programados todavía.</p>';
-      return;
-    }
-    agBox.innerHTML = conFecha.map(function (p) {
-      var vencido = p.fecha_programada < hoy && !p.publicado;
-      return '<div class="rs-post-card" style="margin-bottom:12px;' + (vencido ? 'border-color:#C0392B;' : '') + '">' +
-        '<div class="rs-post-meta" style="padding:12px 12px 0;">' +
-        '<span class="rs-folder-badge">' + esc(p.fecha_programada) + '</span>' +
-        (p.carpeta ? '<span class="rs-folder-badge">' + esc(p.carpeta) + '</span>' : '') +
-        (p.gcal_id ? '<span class="rs-folder-badge" style="background:#E8F5E9;">✓ En Google Calendar</span>' : '') +
-        '</div>' +
-        '<div class="rs-post-body"><p>' + esc(p.sub || p.ig_caption || '(sin descripción)') + '</p></div>' +
-        metaRowHtml(p) +
-        '</div>';
-    }).join('');
-    agBox.querySelectorAll('[data-publish-id]').forEach(function (btn) {
-      btn.addEventListener('click', function () { togglePublicado(btn.dataset.publishId, btn.dataset.publicado !== 'true'); });
+  // ── AGENDA · CALENDARIO MENSUAL ─────────────────────────
+  var calHoy = new Date();
+  state.calMes = calHoy.getMonth(); // 0-indexed
+  state.calAnio = calHoy.getFullYear();
+
+  var MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  var DOW_ES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+  function diasDelMes(anio, mes) {
+    var primerDia = new Date(anio, mes, 1);
+    var ultimoDia = new Date(anio, mes + 1, 0);
+    var inicioOffset = (primerDia.getDay() + 6) % 7; // lunes=0
+    var dias = [];
+    for (var k = 0; k < inicioOffset; k++) dias.push(null);
+    for (var d = 1; d <= ultimoDia.getDate(); d++) dias.push(d);
+    return dias;
+  }
+
+  function fechaISO(anio, mes, dia) {
+    return anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+
+  function renderCalGrid() {
+    var agBox = el('cal-agenda');
+    if (!agBox) return;
+    var hoy = hoyISO();
+    var anio = state.calAnio, mes = state.calMes;
+    el('cal-mes-label').textContent = MESES_ES[mes] + ' ' + anio;
+
+    var porFecha = {};
+    state.allPosts.forEach(function (p) {
+      if (!p.fecha_programada) return;
+      (porFecha[p.fecha_programada] = porFecha[p.fecha_programada] || []).push(p);
     });
+
+    var dias = diasDelMes(anio, mes);
+    var html = DOW_ES.map(function (d) { return '<div class="cal-dow">' + d + '</div>'; }).join('');
+    html += dias.map(function (dia) {
+      if (dia === null) return '<div class="cal-day empty"></div>';
+      var fecha = fechaISO(anio, mes, dia);
+      var posts = porFecha[fecha] || [];
+      var esHoy = fecha === hoy;
+      var imgs = posts.map(function (p) {
+        var vencido = fecha < hoy && !p.publicado;
+        return '<img src="' + esc(p.image_url) + '" class="' + (vencido ? 'vencido' : '') + '" data-abrir-post-id="' + p.id + '">';
+      }).join('');
+      return '<div class="cal-day' + (esHoy ? ' today' : '') + '"><div class="cal-day-num">' + dia + '</div><div class="cal-day-imgs">' + imgs + '</div></div>';
+    }).join('');
+
+    agBox.innerHTML = '<div class="cal-grid">' + html + '</div>';
+    agBox.querySelectorAll('[data-abrir-post-id]').forEach(function (img) {
+      img.addEventListener('click', function () { abrirPostModal(img.dataset.abrirPostId); });
+    });
+  }
+
+  function cambiarMesCalendario(delta) {
+    state.calMes += delta;
+    if (state.calMes < 0) { state.calMes = 11; state.calAnio--; }
+    if (state.calMes > 11) { state.calMes = 0; state.calAnio++; }
+    renderCalGrid();
+  }
+
+  function abrirPostModal(id) {
+    var p = state.allPosts.find(function (x) { return x.id === id; });
+    if (!p) return;
+    var overlay = el('cal-modal-overlay');
+    var content = el('cal-modal-content');
+    content.innerHTML =
+      '<button class="cal-modal-close" id="cal-modal-close-btn">×</button>' +
+      '<img class="cal-modal-img" src="' + esc(p.image_url) + '">' +
+      '<div class="cal-modal-body">' +
+      '<div class="rs-post-meta" style="padding:0 0 10px;">' +
+      (p.fecha_programada ? '<span class="rs-folder-badge">' + esc(p.fecha_programada) + '</span>' : '') +
+      (p.carpeta ? '<span class="rs-folder-badge">' + esc(p.carpeta) + '</span>' : '') +
+      '</div>' +
+      (p.ig_caption ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">INSTAGRAM</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.ig_caption) + '</p>' : '') +
+      (p.li_caption ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">LINKEDIN</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.li_caption) + '</p>' : '') +
+      (p.wa_text ? '<p style="font-size:12px;font-weight:800;color:#999;margin:10px 0 2px;">WHATSAPP</p><p style="font-size:13px;white-space:pre-line;">' + esc(p.wa_text) + '</p>' : '') +
+      metaRowHtml(p) +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+      '<button class="save-btn" id="cal-modal-editar-btn" style="flex:1;">✎ Editar imagen con IA</button>' +
+      '<button class="rs-post-del" id="cal-modal-borrar-btn" style="position:static;width:auto;border-radius:20px;padding:0 14px;font-size:12px;">Eliminar</button>' +
+      '</div>' +
+      '</div>';
+
+    overlay.style.display = 'flex';
+    el('cal-modal-close-btn').addEventListener('click', cerrarPostModal);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrarPostModal(); });
+    content.querySelectorAll('[data-publish-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () { togglePublicado(btn.dataset.publishId, btn.dataset.publicado !== 'true'); cerrarPostModal(); });
+    });
+    el('cal-modal-editar-btn').addEventListener('click', function () {
+      cerrarPostModal();
+      editarPostImagenEnGenerador(p.id);
+    });
+    el('cal-modal-borrar-btn').addEventListener('click', function () {
+      cerrarPostModal();
+      deletePost(p.id);
+    });
+  }
+
+  function cerrarPostModal() {
+    el('cal-modal-overlay').style.display = 'none';
   }
 
   // ── GENERADOR IA ───────────────────────────────────────
@@ -769,6 +853,8 @@
     el('logo-subir-btn').addEventListener('click', handleSubirLogo);
     el('carpeta-crear-btn').addEventListener('click', handleCrearCarpeta);
     el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
+    el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
+    el('cal-mes-next').addEventListener('click', function () { cambiarMesCalendario(1); });
     el('rs-gen-logo-select').addEventListener('change', function (e) {
       if (e.target.value) {
         state.logoInfo = null; // solo una fuente de logo a la vez
