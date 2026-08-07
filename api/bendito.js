@@ -284,10 +284,22 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
 
+      if (accion === 'buscarInspiracionPorHash') {
+        const { image_hash } = body;
+        if (!image_hash) return res.status(400).json({ error: 'Falta image_hash' });
+        const { data, error } = await supabase.from('inspirations').select('id, image_url').eq('image_hash', image_hash).maybeSingle();
+        if (error) throw error;
+        return res.status(200).json({ existe: !!data, data: data || null });
+      }
+
       if (accion === 'crearInspiracion') {
-        const { image_url, prompt } = body;
+        const { image_url, prompt, image_hash } = body;
         if (!image_url) return res.status(400).json({ error: 'Falta image_url' });
-        const { data, error } = await supabase.from('inspirations').insert({ image_url, prompt: prompt || null }).select().single();
+        if (image_hash) {
+          const { data: existente } = await supabase.from('inspirations').select('id, image_url').eq('image_hash', image_hash).maybeSingle();
+          if (existente) return res.status(200).json({ ok: true, duplicado: true, data: existente });
+        }
+        const { data, error } = await supabase.from('inspirations').insert({ image_url, prompt: prompt || null, image_hash: image_hash || null }).select().single();
         if (error) throw error;
         return res.status(200).json({ ok: true, data });
       }

@@ -455,23 +455,39 @@
     }
   }
 
+  async function hashArchivo(file) {
+    var buffer = await file.arrayBuffer();
+    var digest = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.prototype.map.call(new Uint8Array(digest), function (b) {
+      return b.toString(16).padStart(2, '0');
+    }).join('');
+  }
+
   async function handleBulkUpload(e) {
     var files = Array.prototype.slice.call(e.target.files || []);
     if (!files.length) return;
     var statusEl = el('insp-bulk-status');
     var subidas = 0;
+    var duplicadas = 0;
+    var hashesEnEsteLote = {};
     for (var i = 0; i < files.length; i++) {
       statusEl.textContent = 'Subiendo ' + (i + 1) + ' de ' + files.length + '…';
       try {
+        var hash = await hashArchivo(files[i]);
+        if (hashesEnEsteLote[hash]) { duplicadas++; continue; }
+        var existente = await BL_API.benditoPost({ accion: 'buscarInspiracionPorHash', image_hash: hash });
+        if (existente.existe) { duplicadas++; hashesEnEsteLote[hash] = true; continue; }
+        hashesEnEsteLote[hash] = true;
+
         var info = await fileToBase64(files[i]);
         var up = await BL_API.benditoPost({ accion: 'subirImagen', base64: info.base64, mediaType: info.mediaType, filename: 'pinterest' });
-        await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url });
-        subidas++;
+        var res = await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url, image_hash: hash });
+        if (res.duplicado) duplicadas++; else subidas++;
       } catch (err) {
         statusEl.textContent = 'Error subiendo "' + files[i].name + '": ' + err.message;
       }
     }
-    statusEl.textContent = '✓ ' + subidas + ' de ' + files.length + ' imagen(es) guardadas.';
+    statusEl.textContent = '✓ ' + subidas + ' guardada(s)' + (duplicadas ? ', ' + duplicadas + ' ya existían (omitida' + (duplicadas === 1 ? '' : 's') + ')' : '') + '.';
     el('insp-bulk-file').value = '';
     loadGallery();
   }
@@ -765,10 +781,26 @@
     setGenStatus('Subiendo imagen…');
 
     try {
+      var hash = await hashArchivo(file);
+      var existente = await BL_API.benditoPost({ accion: 'buscarInspiracionPorHash', image_hash: hash });
+      if (existente.existe) {
+        setGenStatus('Esta imagen ya estaba guardada en Inspiración — se reutiliza en vez de duplicarla.');
+        state.imageUrl = existente.data.image_url;
+        var inspExistente = state.allInspirations.find(function (i) { return i.id === existente.data.id; });
+        state.inspirationId = existente.data.id;
+        if (inspExistente && inspExistente.prompt) {
+          el('rs-gen-prompt').value = inspExistente.prompt;
+          setGenStatus('✓ Imagen ya existente — prompt cargado.');
+          return;
+        }
+        await analizarImagenActual();
+        return;
+      }
+
       var up = await BL_API.benditoPost({ accion: 'subirImagen', base64: info.base64, mediaType: info.mediaType, filename: 'inspiracion' });
       state.imageUrl = up.url;
 
-      var insp = await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url });
+      var insp = await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url, image_hash: hash });
       state.inspirationId = insp.data.id;
 
       await analizarImagenActual();
