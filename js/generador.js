@@ -113,6 +113,14 @@
     box.querySelectorAll('[data-editar-post-id]').forEach(function (btn) {
       btn.addEventListener('click', function () { editarPostImagenEnGenerador(btn.dataset.editarPostId); });
     });
+    box.querySelectorAll('[data-toggle-variantes-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        el('rs-post-variantes-strip-' + btn.dataset.toggleVariantesId).classList.toggle('open');
+      });
+    });
+    box.querySelectorAll('[data-usar-variante-url]').forEach(function (img) {
+      img.addEventListener('click', function () { usarVarianteComoPortada(img.dataset.usarVarianteId, img.dataset.usarVarianteUrl); });
+    });
   }
 
   async function editarPostImagenEnGenerador(id) {
@@ -137,9 +145,80 @@
       el('rs-gen-fecha').value = post.fecha_programada || '';
       el('rs-gen-blocks').innerHTML = '<p class="rs-feed-empty">Editando solo la imagen — el copy actual del post no cambia salvo que pulses "Generar con IA" otra vez.</p>';
       el('rs-gen-result').style.display = 'block';
+      renderVariantesPost();
       setGenStatus('✓ Editando la imagen de un post existente — usa "🪄 Editar con IA" abajo y luego guarda para actualizarlo.');
     } catch (e) {
       setGenStatus('Error cargando la imagen: ' + e.message);
+    }
+  }
+
+  function renderVariantesPost() {
+    var box = el('rs-post-variantes-box');
+    var grid = el('rs-post-variantes-grid');
+    if (!state.editingPostId) { box.style.display = 'none'; return; }
+    var post = state.allPosts.find(function (p) { return p.id === state.editingPostId; });
+    if (!post) { box.style.display = 'none'; return; }
+
+    var todas = [post.image_url].concat(Array.isArray(post.variantes) ? post.variantes : []);
+    grid.innerHTML = todas.map(function (url) {
+      var sel = url === state.imageUrl;
+      return '<div class="rs-gallery-item' + (sel ? '' : '') + '" style="' + (sel ? 'outline:3px solid var(--blue);' : '') + '">' +
+        '<img src="' + esc(url) + '" data-variante-url="' + esc(url) + '">' +
+        (url !== post.image_url ? '<div class="rs-gallery-actions" style="left:auto;right:4px;"><button data-quitar-variante-url="' + esc(url) + '" title="Quitar variante">×</button></div>' : '') +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('[data-variante-url]').forEach(function (img) {
+      img.addEventListener('click', function () { seleccionarVariante(img.dataset.varianteUrl); });
+    });
+    grid.querySelectorAll('[data-quitar-variante-url]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) { e.stopPropagation(); quitarVariante(btn.dataset.quitarVarianteUrl); });
+    });
+    box.style.display = 'block';
+  }
+
+  async function seleccionarVariante(url) {
+    setGenStatus('Cargando variante…');
+    try {
+      var info = await urlToBase64(url);
+      state.imageInfo = info;
+      state.imageUrl = url;
+      el('rs-gen-preview').src = info.dataUrl;
+      el('rs-gen-preview').style.display = 'block';
+      renderVariantesPost();
+      setGenStatus('✓ Variante cargada como base — genera el prompt o edita con IA si quieres.');
+    } catch (e) {
+      setGenStatus('Error cargando la variante: ' + e.message);
+    }
+  }
+
+  async function handleAgregarVariantePost(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file || !state.editingPostId) return;
+    setGenStatus('Subiendo variante…');
+    try {
+      var info = await fileToBase64(file);
+      var up = await BL_API.benditoPost({ accion: 'subirImagen', base64: info.base64, mediaType: info.mediaType, filename: 'variante' });
+      var res = await BL_API.benditoPost({ accion: 'agregarVariante', id: state.editingPostId, image_url: up.url });
+      var post = state.allPosts.find(function (p) { return p.id === state.editingPostId; });
+      if (post) post.variantes = res.data.variantes;
+      el('rs-post-variante-file').value = '';
+      renderVariantesPost();
+      setGenStatus('✓ Variante añadida.');
+    } catch (err) {
+      setGenStatus('Error subiendo la variante: ' + err.message);
+    }
+  }
+
+  async function quitarVariante(url) {
+    if (!state.editingPostId) return;
+    if (!confirm('¿Quitar esta variante del post?')) return;
+    try {
+      var res = await BL_API.benditoPost({ accion: 'eliminarVariante', id: state.editingPostId, image_url: url });
+      var post = state.allPosts.find(function (p) { return p.id === state.editingPostId; });
+      if (post) post.variantes = res.data.variantes;
+      renderVariantesPost();
+    } catch (e) {
+      alert('Error al quitar la variante: ' + e.message);
     }
   }
 
@@ -155,6 +234,17 @@
   var SHAPE_BY_CHANNEL = { ig: 'shape-circle', li: 'shape-square', wa: 'shape-triangle' };
   var SHADOW_BY_CHANNEL = { ig: 'shadow-hard-blue', li: 'shadow-hard-red', wa: 'shadow-hard-yellow' };
 
+  function variantesStripHtml(p) {
+    var variantes = Array.isArray(p.variantes) ? p.variantes : [];
+    if (!variantes.length) return '';
+    var todas = [p.image_url].concat(variantes);
+    return '<button class="rs-post-variantes-toggle" data-toggle-variantes-id="' + p.id + '">🖼️ Variantes (' + todas.length + ')</button>' +
+      '<div class="rs-post-variantes-strip" id="rs-post-variantes-strip-' + p.id + '">' +
+      todas.map(function (url) {
+        return '<img src="' + esc(url) + '" class="' + (url === p.image_url ? 'actual' : '') + '" data-usar-variante-id="' + p.id + '" data-usar-variante-url="' + esc(url) + '">';
+      }).join('') + '</div>';
+  }
+
   function postCardHtml(channel, p) {
     var del = '<button class="rs-post-del" data-del-id="' + p.id + '">×</button>' +
       '<button class="rs-post-del" style="right:38px;" data-editar-post-id="' + p.id + '" title="Editar imagen con IA">✎</button>';
@@ -166,7 +256,7 @@
         '<p>' + esc(p.wa_text || '(sin copy de WhatsApp)') + '</p>' +
         '</div></div>' +
         '<div class="rs-post-copy-row"><button class="rs-copy-btn" data-copy-text="' + esc(p.wa_text || '') + '">Copiar copy</button></div>' +
-        metaRowHtml(p) +
+        metaRowHtml(p) + variantesStripHtml(p) +
         '</div>';
     }
     var isIg = channel === 'ig';
@@ -179,8 +269,19 @@
       '<img class="rs-post-img" src="' + esc(p.image_url) + '">' +
       '<div class="rs-post-body"><p>' + esc(caption) + '</p><p class="rs-post-tags">' + esc(hashtags) + '</p></div>' +
       '<div class="rs-post-copy-row"><button class="rs-copy-btn" data-copy-text="' + esc(full) + '">Copiar copy</button></div>' +
-      metaRowHtml(p) +
+      metaRowHtml(p) + variantesStripHtml(p) +
       '</div>';
+  }
+
+  async function usarVarianteComoPortada(id, url) {
+    try {
+      var res = await BL_API.benditoPost({ accion: 'actualizarPost', id: id, image_url: url });
+      var idx = state.allPosts.findIndex(function (p) { return p.id === id; });
+      if (idx !== -1) state.allPosts[idx] = res.data;
+      renderAllFeeds();
+    } catch (e) {
+      alert('Error al cambiar la imagen: ' + e.message);
+    }
   }
 
   async function deletePost(id) {
@@ -339,6 +440,7 @@
       state.inspirationId = insp.id;
       state.genResult = null;
       state.editingPostId = null;
+      el('rs-post-variantes-box').style.display = 'none';
       el('rs-gen-preview').src = info.dataUrl;
       el('rs-gen-preview').style.display = 'block';
       el('rs-gen-prompt').value = insp.prompt || '';
@@ -528,6 +630,7 @@
     state.genResult = null;
     state.logoInfo = null;
     state.editingPostId = null;
+    el('rs-post-variantes-box').style.display = 'none';
     el('rs-gen-result').style.display = 'none';
     el('rs-gen-art-file').value = '';
     el('rs-gen-art-preview').style.display = 'none';
@@ -825,6 +928,7 @@
     el('rs-gen-fecha').value = '';
     el('rs-gen-ficha').style.display = 'none';
     el('rs-gen-logo-select').value = '';
+    el('rs-post-variantes-box').style.display = 'none';
   }
 
   // ── LOGOS ──────────────────────────────────────────────
@@ -973,6 +1077,7 @@
       copyToClipboard(el('rs-gen-prompt-ext-texto').textContent, el('rs-gen-prompt-ext-copy-btn'));
     });
     el('rs-gen-resultado-externo-file').addEventListener('change', handleResultadoExternoChange);
+    el('rs-post-variante-file').addEventListener('change', handleAgregarVariantePost);
     el('logo-file').addEventListener('change', handleLogoFileChange);
     el('logo-subir-btn').addEventListener('click', handleSubirLogo);
     el('carpeta-crear-btn').addEventListener('click', handleCrearCarpeta);

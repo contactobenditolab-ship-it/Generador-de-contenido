@@ -292,7 +292,20 @@ module.exports = async function handler(req, res) {
         if (body.publicado !== undefined) patch.publicado = !!body.publicado;
         if (body.carpeta !== undefined) patch.carpeta = body.carpeta ? String(body.carpeta).slice(0, 120) : null;
         if (body.fecha_programada !== undefined) patch.fecha_programada = body.fecha_programada || null;
-        if (body.image_url !== undefined) patch.image_url = body.image_url;
+
+        if (body.image_url !== undefined) {
+          // Al cambiar la imagen "portada" de un post ya guardado, la
+          // anterior no se pierde: pasa a la lista de variantes, para poder
+          // volver a elegirla luego como base del generador.
+          const { data: actual } = await supabase.from('posts').select('image_url, variantes').eq('id', id).maybeSingle();
+          patch.image_url = body.image_url;
+          if (actual && actual.image_url && actual.image_url !== body.image_url) {
+            const variantes = Array.isArray(actual.variantes) ? actual.variantes.slice() : [];
+            if (!variantes.includes(actual.image_url)) variantes.push(actual.image_url);
+            patch.variantes = variantes;
+          }
+        }
+
         const { data, error } = await supabase.from('posts').update(patch).eq('id', id).select().single();
         if (error) throw error;
 
@@ -309,6 +322,31 @@ module.exports = async function handler(req, res) {
             data.gcal_id = null;
           }
         }
+        return res.status(200).json({ ok: true, data });
+      }
+
+      if (accion === 'agregarVariante') {
+        const { id, image_url } = body;
+        if (!id || !image_url) return res.status(400).json({ error: 'Falta id o image_url' });
+        const { data: actual, error: e1 } = await supabase.from('posts').select('variantes').eq('id', id).maybeSingle();
+        if (e1) throw e1;
+        if (!actual) return res.status(404).json({ error: 'Post no encontrado' });
+        const variantes = Array.isArray(actual.variantes) ? actual.variantes.slice() : [];
+        if (!variantes.includes(image_url)) variantes.push(image_url);
+        const { data, error } = await supabase.from('posts').update({ variantes }).eq('id', id).select().single();
+        if (error) throw error;
+        return res.status(200).json({ ok: true, data });
+      }
+
+      if (accion === 'eliminarVariante') {
+        const { id, image_url } = body;
+        if (!id || !image_url) return res.status(400).json({ error: 'Falta id o image_url' });
+        const { data: actual, error: e1 } = await supabase.from('posts').select('variantes').eq('id', id).maybeSingle();
+        if (e1) throw e1;
+        if (!actual) return res.status(404).json({ error: 'Post no encontrado' });
+        const variantes = (Array.isArray(actual.variantes) ? actual.variantes : []).filter((u) => u !== image_url);
+        const { data, error } = await supabase.from('posts').update({ variantes }).eq('id', id).select().single();
+        if (error) throw error;
         return res.status(200).json({ ok: true, data });
       }
 
