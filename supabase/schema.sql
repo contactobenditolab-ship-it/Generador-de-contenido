@@ -21,6 +21,8 @@ create table if not exists posts (
   fecha text,
   publicado boolean not null default false,
   carpeta text,
+  fecha_programada date,
+  gcal_id text,
   created_at timestamptz not null default now()
 );
 
@@ -33,7 +35,22 @@ create table if not exists inspirations (
   created_at timestamptz not null default now()
 );
 
+create table if not exists logos (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null,
+  image_url text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists carpetas (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null unique,
+  created_at timestamptz not null default now()
+);
+
 -- RLS: todo el acceso pasa por /api/bendito.js (service role key, que
 -- siempre salta RLS), así que se deja activado sin políticas públicas.
 alter table posts enable row level security;
 alter table inspirations enable row level security;
+alter table logos enable row level security;
+alter table carpetas enable row level security;
