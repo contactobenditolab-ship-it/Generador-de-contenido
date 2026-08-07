@@ -243,6 +243,7 @@
           return '<div class="rs-gallery-item"><img src="' + esc(i.image_url) + '">' +
             (i.used ? '<span class="rs-gallery-used">✓</span>' : '') +
             '<div class="rs-gallery-actions">' +
+            '<button data-descargar-insp-url="' + esc(i.image_url) + '" title="Descargar en calidad original">⬇</button>' +
             '<button data-editar-insp-id="' + i.id + '" title="Editar en el Generador IA">✎</button>' +
             '<button data-del-insp-id="' + i.id + '" title="Eliminar">×</button>' +
             '</div></div>';
@@ -253,8 +254,50 @@
       box.querySelectorAll('[data-editar-insp-id]').forEach(function (btn) {
         btn.addEventListener('click', function () { editarInspiracionEnGenerador(btn.dataset.editarInspId); });
       });
+      box.querySelectorAll('[data-descargar-insp-url]').forEach(function (btn) {
+        btn.addEventListener('click', function () { descargarImagenOriginal(btn.dataset.descargarInspUrl); });
+      });
     }
     renderCalendario();
+  }
+
+  /** Descarga la imagen en su calidad/resolución original (no la miniatura que se ve en pantalla). */
+  async function descargarImagenOriginal(url) {
+    try {
+      var res = await fetch(url);
+      var blob = await res.blob();
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = url.split('/').pop().split('?')[0] || 'imagen';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 5000);
+    } catch (e) {
+      alert('Error al descargar: ' + e.message);
+    }
+  }
+
+  async function handleBulkUpload(e) {
+    var files = Array.prototype.slice.call(e.target.files || []);
+    if (!files.length) return;
+    var statusEl = el('insp-bulk-status');
+    var subidas = 0;
+    for (var i = 0; i < files.length; i++) {
+      statusEl.textContent = 'Subiendo ' + (i + 1) + ' de ' + files.length + '…';
+      try {
+        var info = await fileToBase64(files[i]);
+        var up = await BL_API.benditoPost({ accion: 'subirImagen', base64: info.base64, mediaType: info.mediaType, filename: 'pinterest' });
+        await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url });
+        subidas++;
+      } catch (err) {
+        statusEl.textContent = 'Error subiendo "' + files[i].name + '": ' + err.message;
+      }
+    }
+    statusEl.textContent = '✓ ' + subidas + ' de ' + files.length + ' imagen(es) guardadas.';
+    el('insp-bulk-file').value = '';
+    loadGallery();
   }
 
   async function eliminarInspiracion(id) {
@@ -855,6 +898,7 @@
     el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
     el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
     el('cal-mes-next').addEventListener('click', function () { cambiarMesCalendario(1); });
+    el('insp-bulk-file').addEventListener('change', handleBulkUpload);
     el('rs-gen-logo-select').addEventListener('change', function (e) {
       if (e.target.value) {
         state.logoInfo = null; // solo una fuente de logo a la vez

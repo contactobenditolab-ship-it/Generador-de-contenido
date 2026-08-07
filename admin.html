@@ -139,7 +139,12 @@ input[type="file"]{display:none;}
   <div class="rs-panel active" data-rs-panel="ig"><div class="rs-feed" id="rs-feed-ig"></div></div>
   <div class="rs-panel" data-rs-panel="li"><div class="rs-feed" id="rs-feed-li"></div></div>
   <div class="rs-panel" data-rs-panel="wa"><div class="rs-feed" id="rs-feed-wa"></div></div>
-  <div class="rs-panel" data-rs-panel="insp"><div class="rs-gallery" id="rs-gallery"></div></div>
+  <div class="rs-panel" data-rs-panel="insp">
+    <label class="img-btn" for="insp-bulk-file" style="display:inline-block;margin-bottom:6px;">📤 Subir varias imágenes</label>
+    <input type="file" accept="image/*" id="insp-bulk-file" multiple>
+    <div class="rs-gen-status" id="insp-bulk-status" style="text-align:left;"></div>
+    <div class="rs-gallery" id="rs-gallery" style="margin-top:10px;"></div>
+  </div>
 
   <div class="rs-panel" data-rs-panel="cal">
     <div class="card" style="max-width:560px;">
