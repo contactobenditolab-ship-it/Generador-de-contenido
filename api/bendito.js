@@ -65,6 +65,27 @@ async function descargarImagenBase64(url) {
   return { base64: buf.toString('base64'), mediaType };
 }
 
+/**
+ * Normaliza las distintas formas en que puede llegar el logo/referencia
+ * (un único refBase64/refImageUrl "de toda la vida", o un array
+ * refImagenes con varios logos elegidos en el Generador IA) a una lista
+ * de { base64, mediaType } lista para mandar a Gemini.
+ */
+async function resolverRefImagenes({ refBase64, refMediaType, refImageUrl, refImagenes }) {
+  const entradas = Array.isArray(refImagenes) && refImagenes.length
+    ? refImagenes
+    : (refBase64 || refImageUrl) ? [{ base64: refBase64, mediaType: refMediaType, url: refImageUrl }] : [];
+  const resueltas = [];
+  for (const entrada of entradas) {
+    if (entrada.base64) {
+      resueltas.push({ base64: entrada.base64, mediaType: entrada.mediaType });
+    } else if (entrada.url) {
+      resueltas.push(await descargarImagenBase64(entrada.url));
+    }
+  }
+  return resueltas;
+}
+
 module.exports = async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
@@ -148,39 +169,32 @@ module.exports = async function handler(req, res) {
       }
 
       if (accion === 'editarConIA') {
-        let { baseBase64, baseMediaType, refBase64, refMediaType, refImageUrl, instruccion } = body;
+        let { baseBase64, baseMediaType, refBase64, refMediaType, refImageUrl, refImagenes, instruccion } = body;
         if (!baseBase64 || !baseMediaType || !instruccion) {
           return res.status(400).json({ error: 'Faltan campos obligatorios (imagen base e instrucción)' });
         }
-        if (!refBase64 && refImageUrl) {
-          const descargada = await descargarImagenBase64(refImageUrl);
-          refBase64 = descargada.base64;
-          refMediaType = descargada.mediaType;
-        }
+        const refs = await resolverRefImagenes({ refBase64, refMediaType, refImageUrl, refImagenes });
         const direccionCreativa = await obtenerDireccionCreativa(supabase);
-        const result = await editarImagenConIA({ baseBase64, baseMediaType, refBase64, refMediaType, instruccion, direccionCreativa });
+        const result = await editarImagenConIA({ baseBase64, baseMediaType, refImagenes: refs, instruccion, direccionCreativa });
         return res.status(200).json({ ok: true, ...result });
       }
 
       if (accion === 'generarPromptEdicion') {
-        let { baseBase64, baseMediaType, refBase64, refMediaType, refImageUrl, instruccion } = body;
+        let { baseBase64, baseMediaType, refBase64, refMediaType, refImageUrl, refImagenes, instruccion } = body;
         if (!baseBase64 || !baseMediaType || !instruccion) {
           return res.status(400).json({ error: 'Faltan campos obligatorios (imagen base e instrucción)' });
         }
-        if (!refBase64 && refImageUrl) {
-          const descargada = await descargarImagenBase64(refImageUrl);
-          refBase64 = descargada.base64;
-          refMediaType = descargada.mediaType;
-        }
+        const refs = await resolverRefImagenes({ refBase64, refMediaType, refImageUrl, refImagenes });
         const direccionCreativa = await obtenerDireccionCreativa(supabase);
         const userText = 'Instrucción del usuario sobre qué integrar/cambiar: ' + instruccion +
-          (refBase64 ? '\n\nLa segunda imagen adjunta es la referencia del logo/texto/dibujo a integrar.' : '');
+          (refs.length === 1 ? '\n\nLa segunda imagen adjunta es la referencia del logo/texto/dibujo a integrar.'
+            : refs.length > 1 ? '\n\nEl resto de imágenes adjuntas (' + refs.length + ') son referencias de los logos/textos/dibujos a integrar.' : '');
         const result = await callGeminiVisionJSON({
           system: promptEdicionExternaSystem(direccionCreativa),
           userText,
           base64: baseBase64,
           mediaType: baseMediaType,
-          extraImages: refBase64 ? [{ base64: refBase64, mediaType: refMediaType }] : undefined,
+          extraImages: refs.length ? refs : undefined,
           maxTokens: 800,
         });
         return res.status(200).json(result);
@@ -234,9 +248,22 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      if (accion === 'buscarLogoPorHash') {
+        const { image_hash } = body;
+        if (!image_hash) return res.status(400).json({ error: 'Falta image_hash' });
+        const { data, error } = await supabase.from('logos').select('id, nombre, image_url').eq('image_hash', image_hash).maybeSingle();
+        if (error) throw error;
+        return res.status(200).json({ existe: !!data, data: data || null });
+      }
+
       if (accion === 'subirLogo') {
-        const { base64, mediaType, nombre } = body;
+        const { base64, mediaType, nombre, image_hash } = body;
         if (!base64 || !mediaType) return res.status(400).json({ error: 'Falta la imagen del logo' });
+
+        if (image_hash) {
+          const { data: existente } = await supabase.from('logos').select('id, nombre, image_url').eq('image_hash', image_hash).maybeSingle();
+          if (existente) return res.status(200).json({ ok: true, duplicado: true, data: existente });
+        }
 
         // Fondo transparente siempre: si ya lo tiene, la IA la devuelve
         // igual; si no, se lo quita. Si la IA falla (cuota, etc.) no se
@@ -251,7 +278,7 @@ module.exports = async function handler(req, res) {
         const subido = await subirImagen({ base64: procesado.base64, mediaType: procesado.mediaType, filename: 'logo-' + (nombre || 'sin-nombre') });
         const { data, error } = await supabase
           .from('logos')
-          .insert({ nombre: String(nombre || 'Sin nombre').slice(0, 120), image_url: subido.url })
+          .insert({ nombre: String(nombre || 'Sin nombre').slice(0, 120), image_url: subido.url, image_hash: image_hash || null })
           .select().single();
         if (error) throw error;
         return res.status(200).json({ ok: true, data });

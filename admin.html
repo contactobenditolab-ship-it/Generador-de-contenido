@@ -254,12 +254,14 @@ input[type="file"]{display:none;}
   <div class="rs-panel" data-rs-panel="logos">
     <div class="card" style="max-width:480px;">
       <div class="card-title">🖼️ Librería de logos</div>
+      <div class="field-hint" style="margin-bottom:10px;">Puedes elegir varios logos a la vez — se van subiendo de uno en uno, pidiendo un nombre para cada uno.</div>
+      <label class="img-btn" for="logo-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir uno o varios logos</label>
+      <input type="file" accept="image/*" id="logo-file" multiple>
+      <div id="logo-cola-status" class="field-hint" style="margin-bottom:6px;display:none;"></div>
       <div class="field">
         <label>Nombre</label>
         <input type="text" id="logo-nombre" placeholder="Ej: Logo Bendito Lab, Logo Dilo Bonito…">
       </div>
-      <label class="img-btn" for="logo-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir logo</label>
-      <input type="file" accept="image/*" id="logo-file">
       <img id="logo-preview" class="rs-gen-preview" style="max-height:120px;object-fit:contain;background:#F4F1E6;">
       <button class="save-btn" id="logo-subir-btn" style="width:100%;margin-top:10px;">Guardar logo</button>
       <div class="rs-gen-status" id="logo-status"></div>
@@ -339,7 +341,7 @@ input[type="file"]{display:none;}
         En la pestaña Ajustes puedes editar tú mismo las directrices que sigue la IA (voz de marca, reglas de fotografía, qué evitar...) para el prompt, el copy y la edición de imagen, sin tocar código. Botón para restaurar el valor por defecto si lo lías.</p>
 
         <p><strong>🖼️ Logos y librería de fondo transparente</strong><br>
-        Sube tus logos una vez en 🖼️ Logos — la IA les quita el fondo automáticamente si no lo tienen ya (deja igual los que ya son transparentes). Luego eliges uno de la lista al editar una imagen, en vez de subirlo cada vez. Cada logo tiene un botón ⬇ para descargarlo con el fondo transparente y marcado a 300ppp, listo para imprenta.</p>
+        Sube tus logos en 🖼️ Logos — puedes elegir varios archivos a la vez y se van subiendo de uno en uno, pidiendo un nombre para cada uno; si alguno ya lo tenías guardado (mismo archivo) se avisa y se omite, sin duplicar. La IA les quita el fondo automáticamente si no lo tienen ya. En el Generador IA puedes elegir varios logos guardados a la vez (además de subir uno suelto) para integrarlos todos en la misma edición. Cada logo tiene un botón ⬇ para descargarlo con el fondo transparente y marcado a 300ppp, listo para imprenta.</p>
 
         <p><strong>📌 Pinterest → Inspiración</strong><br>
         En ⚙️ Ajustes puedes conectar un tablón de Pinterest. Una vez conectado y elegido el tablón, los pines nuevos que guardes ahí se traen solos a Inspiración una vez al día (también puedes pulsar "Sincronizar ahora" para forzarlo en el momento).</p>
@@ -461,9 +463,9 @@ input[type="file"]{display:none;}
         </div>
 
         <div class="field">
-          <label>Logo guardado (opcional)</label>
-          <select id="rs-gen-logo-select"><option value="">— Ninguno —</option></select>
-          <div class="field-hint">Elige uno de tu librería de logos (pestaña 🖼️ Logos) en vez de subirlo cada vez.</div>
+          <label>Logos guardados (opcional)</label>
+          <select id="rs-gen-logo-select" multiple size="4"></select>
+          <div class="field-hint">Puedes elegir varios logos a la vez de tu librería (pestaña 🖼️ Logos) — Ctrl/Cmd+clic (o mantén pulsado en móvil) para seleccionar más de uno.</div>
         </div>
 
         <div class="field">
