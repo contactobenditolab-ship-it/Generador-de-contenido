@@ -338,6 +338,9 @@ input[type="file"]{display:none;}
 
         <p><strong>🖼️ Logos y librería de fondo transparente</strong><br>
         Sube tus logos una vez en 🖼️ Logos — la IA les quita el fondo automáticamente si no lo tienen ya (deja igual los que ya son transparentes). Luego eliges uno de la lista al editar una imagen, en vez de subirlo cada vez.</p>
+
+        <p><strong>📌 Pinterest → Inspiración</strong><br>
+        En ⚙️ Ajustes puedes conectar un tablón de Pinterest. Una vez conectado y elegido el tablón, los pines nuevos que guardes ahí se traen solos a Inspiración una vez al día (también puedes pulsar "Sincronizar ahora" para forzarlo en el momento).</p>
       </div>
     </div>
   </div>
@@ -354,6 +357,26 @@ input[type="file"]{display:none;}
         <button class="save-btn" id="ajustes-restaurar-btn" style="flex:1;background:#fff;">↺ Restaurar valor por defecto</button>
       </div>
       <div class="rs-gen-status" id="ajustes-status"></div>
+    </div>
+
+    <div class="card" style="max-width:720px;margin-top:16px;">
+      <div class="card-title">📌 Pinterest → Inspiración</div>
+      <div class="field-hint" style="margin-bottom:12px;">Conecta un tablón de Pinterest y sus pines se traen solos a Inspiración una vez al día. También puedes forzar una sincronización manual aquí.</div>
+      <div id="pinterest-estado" style="margin-bottom:12px;font-size:14px;">Comprobando conexión…</div>
+      <div id="pinterest-conectar-bloque" style="display:none;">
+        <a class="save-btn" id="pinterest-conectar-btn" style="display:inline-block;text-decoration:none;text-align:center;" href="#">🔗 Conectar Pinterest</a>
+      </div>
+      <div id="pinterest-conectado-bloque" style="display:none;">
+        <div class="field">
+          <label>Tablón a sincronizar</label>
+          <select id="pinterest-tablero-select"></select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="save-btn" id="pinterest-guardar-tablero-btn" style="flex:1;">💾 Guardar tablón</button>
+          <button class="save-btn" id="pinterest-sincronizar-btn" style="flex:1;background:#fff;">🔄 Sincronizar ahora</button>
+        </div>
+      </div>
+      <div class="rs-gen-status" id="pinterest-status"></div>
     </div>
   </div>
 

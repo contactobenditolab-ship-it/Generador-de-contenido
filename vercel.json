@@ -22,5 +22,11 @@
       "dest": "/$1"
     }
   ],
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "crons": [
+    {
+      "path": "/api/cron/pinterest-sync",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

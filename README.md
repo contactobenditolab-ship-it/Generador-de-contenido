@@ -79,6 +79,29 @@ defecto de `lib/bendito-prompts.js`.
   tiene `bendito-os`** en Vercel, para sincronizar con Google Calendar.
 - Vercel Blob debe estar conectado al proyecto (Storage → Blob) para poder
   subir imágenes.
+- `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET` — credenciales de una
+  app de Pinterest (developers.pinterest.com), con redirect URI
+  `https://generador-de-contenido.vercel.app/api/auth/pinterest/callback`.
+  Necesarias solo para la sincronización de un tablón de Pinterest hacia
+  Inspiración (pestaña ⚙️ Ajustes). Sin estas variables el resto de la app
+  funciona igual, simplemente la sección de Pinterest muestra error al
+  intentar conectar.
+- `CRON_SECRET` (opcional pero recomendado) — protege
+  `/api/cron/pinterest-sync`, que Vercel Cron llama una vez al día
+  (`vercel.json`) para traer los pines nuevos del tablón conectado.
+
+## Pinterest → Inspiración
+
+En ⚙️ Ajustes, "Conectar Pinterest" abre el flujo OAuth de Pinterest
+(`api/auth/pinterest/iniciar.js` → `api/auth/pinterest/callback.js`), que
+guarda el token en la tabla `pinterest_auth` (singleton, `id=1`). Una vez
+conectado se elige el tablón a sincronizar (`listarTablerosPinterest` /
+`guardarTableroPinterest` en `api/bendito.js`, lógica en `lib/pinterest.js`).
+El cron diario (`api/cron/pinterest-sync.js`) trae los pines creados desde
+la última sincronización y los inserta como nuevas filas en `inspirations`
+(sin analizar con IA todavía — usa el botón "🔄 Sugerir prompt" al abrir
+cada una, igual que con la subida masiva). También hay un botón
+"Sincronizar ahora" en Ajustes para forzarlo sin esperar al cron.
 
 ## Pendiente / fuera de alcance de esta primera versión
 

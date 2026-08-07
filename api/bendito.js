@@ -15,6 +15,7 @@ const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
 const { generarPdfFinal, generarPdfPendiente } = require('../lib/pdf-post');
 const { subirPdfAContenido } = require('../lib/google-drive');
+const { listarTableros: listarTablerosPinterest, sincronizarPinesNuevos: sincronizarPinesPinterest } = require('../lib/pinterest');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
@@ -95,6 +96,15 @@ module.exports = async function handler(req, res) {
       if (tipo === 'configuracion') {
         const direccionCreativa = await obtenerDireccionCreativa(supabase);
         return res.status(200).json({ direccion_creativa: direccionCreativa, es_valor_por_defecto: direccionCreativa === DIRECCION_CREATIVA_DEFAULT });
+      }
+      if (tipo === 'pinterest_estado') {
+        const { data } = await supabase.from('pinterest_auth').select('refresh_token, board_id, board_nombre, last_sync_at').eq('id', 1).maybeSingle();
+        return res.status(200).json({
+          conectado: !!(data && data.refresh_token),
+          board_id: data?.board_id || null,
+          board_nombre: data?.board_nombre || null,
+          last_sync_at: data?.last_sync_at || null,
+        });
       }
       return res.status(400).json({ error: 'tipo desconocido' });
     }
@@ -184,6 +194,34 @@ module.exports = async function handler(req, res) {
           .select().single();
         if (error) throw error;
         return res.status(200).json({ ok: true, data });
+      }
+
+      if (accion === 'listarTablerosPinterest') {
+        try {
+          const tableros = await listarTablerosPinterest();
+          return res.status(200).json({ ok: true, tableros });
+        } catch (e) {
+          return res.status(400).json({ error: e.message });
+        }
+      }
+
+      if (accion === 'guardarTableroPinterest') {
+        const { board_id, board_nombre } = body;
+        if (!board_id) return res.status(400).json({ error: 'Falta board_id' });
+        const { error } = await supabase.from('pinterest_auth').update({
+          board_id, board_nombre: board_nombre || null, updated_at: new Date().toISOString(),
+        }).eq('id', 1);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+
+      if (accion === 'sincronizarPinterestAhora') {
+        try {
+          const result = await sincronizarPinesPinterest();
+          return res.status(200).json({ ok: true, ...result });
+        } catch (e) {
+          return res.status(400).json({ error: e.message });
+        }
       }
 
       if (accion === 'subirLogo') {

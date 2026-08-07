@@ -53,6 +53,7 @@
     loadLogos();
     loadCarpetas();
     loadAjustes();
+    loadPinterestEstado();
   }
 
   // ── FEEDS (IG / LI / WA) ──────────────────────────────
@@ -1311,6 +1312,79 @@
     }
   }
 
+  // ── PINTEREST ──────────────────────────────────────────
+  async function loadPinterestEstado() {
+    try {
+      var d = await BL_API.benditoGet('pinterest_estado');
+      if (!d.conectado) {
+        el('pinterest-estado').textContent = 'No conectado.';
+        el('pinterest-conectar-bloque').style.display = 'block';
+        el('pinterest-conectado-bloque').style.display = 'none';
+        el('pinterest-conectar-btn').href = '/api/auth/pinterest/iniciar?token=' + encodeURIComponent(BL_API.getToken());
+        return;
+      }
+      el('pinterest-conectar-bloque').style.display = 'none';
+      el('pinterest-conectado-bloque').style.display = 'block';
+      var textoEstado = '✓ Conectado';
+      textoEstado += d.board_nombre ? ' — tablón: ' + esc(d.board_nombre) : ' — sin tablón elegido todavía';
+      textoEstado += d.last_sync_at ? ' — última sincronización: ' + new Date(d.last_sync_at).toLocaleString() : '';
+      el('pinterest-estado').textContent = textoEstado;
+      await cargarTablerosPinterest(d.board_id);
+    } catch (e) {
+      el('pinterest-estado').textContent = 'Error comprobando la conexión: ' + e.message;
+    }
+  }
+
+  async function cargarTablerosPinterest(boardIdActual) {
+    var select = el('pinterest-tablero-select');
+    select.innerHTML = '<option value="">Cargando tableros…</option>';
+    try {
+      var d = await BL_API.benditoPost({ accion: 'listarTablerosPinterest' });
+      var tableros = d.tableros || [];
+      select.innerHTML = tableros.map(function (t) {
+        return '<option value="' + esc(t.id) + '"' + (t.id === boardIdActual ? ' selected' : '') + '>' + esc(t.nombre) + '</option>';
+      }).join('') || '<option value="">Sin tableros</option>';
+    } catch (e) {
+      select.innerHTML = '<option value="">Error cargando tableros</option>';
+      el('pinterest-status').textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function handleGuardarTableroPinterest() {
+    var select = el('pinterest-tablero-select');
+    var boardId = select.value;
+    if (!boardId) return;
+    var boardNombre = select.options[select.selectedIndex] ? select.options[select.selectedIndex].textContent : '';
+    var btn = el('pinterest-guardar-tablero-btn');
+    btn.disabled = true;
+    el('pinterest-status').textContent = 'Guardando…';
+    try {
+      await BL_API.benditoPost({ accion: 'guardarTableroPinterest', board_id: boardId, board_nombre: boardNombre });
+      el('pinterest-status').textContent = '✓ Tablón guardado — se sincronizará una vez al día.';
+      await loadPinterestEstado();
+    } catch (e) {
+      el('pinterest-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function handleSincronizarPinterestAhora() {
+    var btn = el('pinterest-sincronizar-btn');
+    btn.disabled = true;
+    el('pinterest-status').textContent = 'Sincronizando…';
+    try {
+      var d = await BL_API.benditoPost({ accion: 'sincronizarPinterestAhora' });
+      el('pinterest-status').textContent = '✓ Sincronizado — ' + (d.importados || 0) + ' pin(es) nuevo(s) añadido(s) a Inspiración.';
+      await loadPinterestEstado();
+      loadGallery();
+    } catch (e) {
+      el('pinterest-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ── WIRING ─────────────────────────────────────────────
   // ensureLoaded() NO se llama aquí: en DOMContentLoaded todavía no hay
   // sesión (la pantalla de login está encima). admin.html llama a
@@ -1340,6 +1414,8 @@
     el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
     el('ajustes-guardar-btn').addEventListener('click', handleGuardarAjustes);
     el('ajustes-restaurar-btn').addEventListener('click', handleRestaurarAjustes);
+    el('pinterest-guardar-tablero-btn').addEventListener('click', handleGuardarTableroPinterest);
+    el('pinterest-sincronizar-btn').addEventListener('click', handleSincronizarPinterestAhora);
     el('cal-mes-prev').addEventListener('click', function () { cambiarMesCalendario(-1); });
     el('cal-mes-next').addEventListener('click', function () { cambiarMesCalendario(1); });
     el('insp-bulk-file').addEventListener('change', handleBulkUpload);
