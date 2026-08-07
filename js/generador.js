@@ -24,6 +24,7 @@
     allLogos: [],
     allCarpetas: [],
     folderFilter: '',
+    editandoCarpetas: false,
     editingPostId: null, // si se está reeditando la imagen de un post ya guardado (en vez de crear uno nuevo)
   };
 
@@ -1390,25 +1391,38 @@
       lista.innerHTML = '<p class="rs-feed-empty">Error cargando carpetas: ' + esc(e.message) + '</p>';
       return;
     }
+    lista.className = 'carpetas-botones' + (state.editandoCarpetas ? ' editando' : '');
     lista.innerHTML = state.allCarpetas.length
       ? state.allCarpetas.map(function (c) {
           var n = state.allPosts.filter(function (p) { return p.carpeta === c.nombre; }).length;
-          return '<div class="carpeta-row">' +
-            '<span data-ver-carpeta="' + esc(c.nombre) + '" style="cursor:pointer;flex:1;">' + esc(c.nombre) + ' <span style="opacity:.5;font-weight:600;">(' + n + ')</span></span>' +
-            '<button data-del-carpeta-id="' + c.id + '">Eliminar</button></div>';
+          return '<button class="carpeta-btn" data-ver-carpeta="' + esc(c.nombre) + '">' + esc(c.nombre) +
+            ' <span style="opacity:.55;font-weight:600;">(' + n + ')</span>' +
+            '<span class="carpeta-del" data-del-carpeta-id="' + c.id + '" title="Eliminar carpeta">×</span></button>';
         }).join('')
       : '<p class="rs-feed-empty">Todavía no has creado ninguna carpeta.</p>';
-    lista.querySelectorAll('[data-del-carpeta-id]').forEach(function (btn) {
-      btn.addEventListener('click', function () { eliminarCarpeta(btn.dataset.delCarpetaId); });
+    lista.querySelectorAll('[data-del-carpeta-id]').forEach(function (span) {
+      span.addEventListener('click', function (e) {
+        e.stopPropagation();
+        eliminarCarpeta(span.dataset.delCarpetaId);
+      });
     });
-    lista.querySelectorAll('[data-ver-carpeta]').forEach(function (span) {
-      span.addEventListener('click', function () { verPostsDeCarpeta(span.dataset.verCarpeta); });
+    lista.querySelectorAll('[data-ver-carpeta]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (state.editandoCarpetas) return;
+        verPostsDeCarpeta(btn.dataset.verCarpeta);
+      });
     });
 
     var actual = select.value;
     select.innerHTML = '<option value="">— Ninguna —</option>' +
       state.allCarpetas.map(function (c) { return '<option value="' + esc(c.nombre) + '">' + esc(c.nombre) + '</option>'; }).join('');
     select.value = actual;
+  }
+
+  function handleToggleEditarCarpetas() {
+    state.editandoCarpetas = !state.editandoCarpetas;
+    el('carpetas-editar-btn').textContent = state.editandoCarpetas ? '✓ Listo' : '✎ Editar';
+    loadCarpetas();
   }
 
   async function handleCrearCarpeta() {
@@ -1608,6 +1622,7 @@
     el('logo-subir-btn').addEventListener('click', handleSubirLogo);
     el('carpeta-crear-btn').addEventListener('click', handleCrearCarpeta);
     el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
+    el('carpetas-editar-btn').addEventListener('click', handleToggleEditarCarpetas);
     el('ajustes-guardar-btn').addEventListener('click', handleGuardarAjustes);
     el('ajustes-restaurar-btn').addEventListener('click', handleRestaurarAjustes);
     el('pinterest-guardar-token-btn').addEventListener('click', handleGuardarTokenManualPinterest);

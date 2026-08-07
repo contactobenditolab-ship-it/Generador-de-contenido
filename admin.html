@@ -154,9 +154,12 @@ input[type="file"]{display:none;}
 .rs-gallery-actions{position:absolute;top:4px;left:4px;display:flex;gap:4px;}
 .rs-gallery-actions button{width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;border:2px solid var(--ink);font-size:11px;cursor:pointer;padding:0;line-height:1;}
 .rs-gallery-actions button:hover{background:var(--blue);}
-.carpeta-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:2px dashed var(--ink);font-size:13px;font-weight:700;}
-.carpeta-row button{font-size:11px;font-weight:800;padding:5px 12px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;text-transform:uppercase;}
-.carpeta-row button:hover{background:var(--red);color:#fff;}
+.carpetas-botones{display:flex;flex-wrap:wrap;gap:10px;}
+.carpeta-btn{position:relative;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;letter-spacing:.3px;padding:9px 14px;border:3px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .05s,box-shadow .05s;}
+.carpeta-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+.carpeta-btn .carpeta-del{display:none;position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;border:2px solid var(--ink);font-size:12px;font-weight:900;align-items:center;justify-content:center;cursor:pointer;}
+.carpetas-botones.editando .carpeta-btn .carpeta-del{display:flex;}
+.carpetas-botones.editando .carpeta-btn{background:var(--paper);}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
 .cal-dow{font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--ink);opacity:.6;text-align:center;padding-bottom:6px;}
 .cal-day{min-height:64px;border:2px solid var(--paper);padding:4px;background:var(--paper);}
@@ -283,8 +286,11 @@ input[type="file"]{display:none;}
       <div class="rs-gen-status" id="carpeta-status"></div>
     </div>
     <div class="card" style="max-width:480px;">
-      <div class="card-title">Carpetas</div>
-      <div id="carpetas-lista"></div>
+      <div class="card-title" style="justify-content:space-between;">
+        <span>Carpetas</span>
+        <button class="img-btn" id="carpetas-editar-btn" style="margin:0;">✎ Editar</button>
+      </div>
+      <div id="carpetas-lista" class="carpetas-botones"></div>
     </div>
   </div>
 
@@ -335,7 +341,7 @@ input[type="file"]{display:none;}
         </ul>
 
         <p><strong>Carpetas</strong><br>
-        Créalas en 📁 Carpetas. Cada carpeta muestra cuántos posts tiene, y al pulsarla te lleva al feed filtrado por esa carpeta.</p>
+        Créalas en 📁 Carpetas. Aparecen como botones con el número de posts que tiene cada una — pulsa un botón para ir al feed filtrado por esa carpeta. Para eliminar una, pulsa "✎ Editar" arriba y aparecerá una cruz sobre cada botón.</p>
 
         <p><strong>⚙️ Ajustes — dirección creativa</strong><br>
         En la pestaña Ajustes puedes editar tú mismo las directrices que sigue la IA (voz de marca, reglas de fotografía, qué evitar...) para el prompt, el copy y la edición de imagen, sin tocar código. Botón para restaurar el valor por defecto si lo lías.</p>
