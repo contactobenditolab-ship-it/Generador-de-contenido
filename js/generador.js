@@ -1396,7 +1396,7 @@
       ? state.allCarpetas.map(function (c) {
           var n = state.allPosts.filter(function (p) { return p.carpeta === c.nombre; }).length;
           return '<button class="carpeta-btn" data-ver-carpeta="' + esc(c.nombre) + '">' + esc(c.nombre) +
-            ' <span style="opacity:.55;font-weight:600;">(' + n + ')</span>' +
+            '<span style="opacity:.55;font-weight:600;font-size:11px;">' + n + (n === 1 ? ' post' : ' posts') + '</span>' +
             '<span class="carpeta-del" data-del-carpeta-id="' + c.id + '" title="Eliminar carpeta">×</span></button>';
         }).join('')
       : '<p class="rs-feed-empty">Todavía no has creado ninguna carpeta.</p>';
