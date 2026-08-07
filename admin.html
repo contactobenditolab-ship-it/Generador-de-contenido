@@ -318,12 +318,31 @@ input[type="file"]{display:none;}
         <div class="field-hint" style="margin-top:6px;">Solo hace falta una de las dos opciones — si el texto/logo ya está escrito en la instrucción de arriba, tampoco hace falta ninguna.</div>
         <img id="rs-gen-art-preview" class="rs-gen-preview" style="max-height:100px;object-fit:contain;background:#F4F1E6;margin-top:10px;">
 
-        <button class="save-btn" id="rs-gen-ia-btn" data-action="rs-edit-ia" style="width:100%;margin-top:10px;">🪄 Editar con IA</button>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="save-btn" id="rs-gen-ia-btn" data-action="rs-edit-ia" style="flex:1;">🪄 Editar con IA</button>
+          <button class="save-btn" id="rs-gen-prompt-ext-btn" style="flex:1;background:#fff;">📝 Solo generar prompt</button>
+        </div>
+        <div class="field-hint" style="margin-top:4px;">"Solo generar prompt" no gasta cuota de edición de imagen — te da el texto para pegarlo en Midjourney, ChatGPT u otra IA, y luego subes aquí el resultado.</div>
         <div class="rs-gen-status" id="rs-gen-ia-status"></div>
         <img id="rs-gen-ia-preview" class="rs-gen-preview" style="margin-top:10px;">
 
+        <div id="rs-gen-prompt-ext-box" style="display:none;margin-top:10px;background:var(--paper);border:2px solid var(--ink);padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <strong style="font-size:11px;text-transform:uppercase;">Prompt para pegar en otra IA</strong>
+            <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-copy-btn">Copiar</button>
+          </div>
+          <p id="rs-gen-prompt-ext-texto" style="font-size:13px;font-weight:600;white-space:pre-line;margin:0;"></p>
+        </div>
+
+        <div class="field" style="margin-top:14px;">
+          <label>Subir resultado creado en otra IA (opcional)</label>
+        </div>
+        <label class="img-btn" for="rs-gen-resultado-externo-file" style="display:inline-block;">📤 Elegir imagen final</label>
+        <input type="file" accept="image/*" id="rs-gen-resultado-externo-file">
+        <div class="field-hint" style="margin-top:6px;">Si generaste la imagen fuera con el prompt de arriba, súbela aquí para que se guarde en este mismo post junto con la inspiración, el copy y el logo usado.</div>
+
         <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:14px;">✓ Guardar en el archivo</button>
-        <div class="field-hint" style="margin-top:6px;text-align:center;">Se guarda la imagen editada con IA si has pulsado "Editar con IA"; si no, se publica la imagen de inspiración tal cual.</div>
+        <div class="field-hint" style="margin-top:6px;text-align:center;">Se guarda la imagen editada con IA o el resultado subido manualmente si has usado alguno de los dos; si no, se publica la imagen de inspiración tal cual.</div>
       </div>
     </div>
   </div>

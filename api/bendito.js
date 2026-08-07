@@ -10,7 +10,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
 const { callGeminiVisionJSON } = require('../lib/gemini-text');
-const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM } = require('../lib/bendito-prompts');
+const { PROMPT_SUGGEST_SYSTEM, COPY_SYSTEM, PROMPT_EDICION_EXTERNA_SYSTEM } = require('../lib/bendito-prompts');
 const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
 
@@ -135,6 +135,29 @@ module.exports = async function handler(req, res) {
         }
         const result = await editarImagenConIA({ baseBase64, baseMediaType, refBase64, refMediaType, instruccion });
         return res.status(200).json({ ok: true, ...result });
+      }
+
+      if (accion === 'generarPromptEdicion') {
+        let { baseBase64, baseMediaType, refBase64, refMediaType, refImageUrl, instruccion } = body;
+        if (!baseBase64 || !baseMediaType || !instruccion) {
+          return res.status(400).json({ error: 'Faltan campos obligatorios (imagen base e instrucción)' });
+        }
+        if (!refBase64 && refImageUrl) {
+          const descargada = await descargarImagenBase64(refImageUrl);
+          refBase64 = descargada.base64;
+          refMediaType = descargada.mediaType;
+        }
+        const userText = 'Instrucción del usuario sobre qué integrar/cambiar: ' + instruccion +
+          (refBase64 ? '\n\nLa segunda imagen adjunta es la referencia del logo/texto/dibujo a integrar.' : '');
+        const result = await callGeminiVisionJSON({
+          system: PROMPT_EDICION_EXTERNA_SYSTEM,
+          userText,
+          base64: baseBase64,
+          mediaType: baseMediaType,
+          extraImages: refBase64 ? [{ base64: refBase64, mediaType: refMediaType }] : undefined,
+          maxTokens: 800,
+        });
+        return res.status(200).json(result);
       }
 
       if (accion === 'subirLogo') {

@@ -648,6 +648,47 @@
     }
   }
 
+  /** Genera solo el texto del prompt (no gasta cuota de edición de imagen) para pegarlo en otra IA. */
+  async function handleGenerarPromptExterno() {
+    var instruccion = el('rs-gen-ia-instruccion').value.trim();
+    if (!state.imageInfo || !instruccion) {
+      setIaEditStatus('Sube la imagen base y escribe qué quieres que integre la IA.');
+      return;
+    }
+    var btn = el('rs-gen-prompt-ext-btn');
+    var logoSeleccionadoUrl = el('rs-gen-logo-select').value;
+    btn.disabled = true; btn.textContent = 'Generando…';
+    setIaEditStatus('Escribiendo el prompt…');
+    try {
+      var result = await BL_API.benditoPost({
+        accion: 'generarPromptEdicion',
+        baseBase64: state.imageInfo.base64,
+        baseMediaType: state.imageInfo.mediaType,
+        refBase64: state.logoInfo ? state.logoInfo.base64 : undefined,
+        refMediaType: state.logoInfo ? state.logoInfo.mediaType : undefined,
+        refImageUrl: (!state.logoInfo && logoSeleccionadoUrl) ? logoSeleccionadoUrl : undefined,
+        instruccion: instruccion,
+      });
+      el('rs-gen-prompt-ext-texto').textContent = result.prompt_para_ia_externa || '';
+      el('rs-gen-prompt-ext-box').style.display = 'block';
+      setIaEditStatus('✓ Prompt listo — cópialo, créala en tu IA favorita y súbela abajo.');
+    } catch (err) {
+      setIaEditStatus('Error generando el prompt: ' + err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '📝 Solo generar prompt';
+    }
+  }
+
+  async function handleResultadoExternoChange(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var info = await fileToBase64(file);
+    state.iaEditedInfo = { base64: info.base64, mediaType: info.mediaType, dataUrl: info.dataUrl };
+    el('rs-gen-ia-preview').src = info.dataUrl;
+    el('rs-gen-ia-preview').style.display = 'block';
+    setIaEditStatus('✓ Resultado externo cargado — se guardará esta versión al pulsar "Guardar en el archivo".');
+  }
+
   async function handleGenerate() {
     var prompt = el('rs-gen-prompt').value.trim();
     if (!state.imageInfo || !prompt) {
@@ -776,6 +817,9 @@
     el('rs-gen-art-preview').style.display = 'none';
     el('rs-gen-ia-instruccion').value = '';
     el('rs-gen-ia-preview').style.display = 'none';
+    el('rs-gen-prompt-ext-box').style.display = 'none';
+    el('rs-gen-prompt-ext-texto').textContent = '';
+    el('rs-gen-resultado-externo-file').value = '';
     setIaEditStatus('');
     el('rs-gen-carpeta').value = '';
     el('rs-gen-fecha').value = '';
@@ -924,6 +968,11 @@
     el('rs-gen-art-file').addEventListener('change', handleArtFileChange);
     el('rs-gen-btn').addEventListener('click', handleGenerate);
     el('rs-gen-ia-btn').addEventListener('click', handleEditarConIA);
+    el('rs-gen-prompt-ext-btn').addEventListener('click', handleGenerarPromptExterno);
+    el('rs-gen-prompt-ext-copy-btn').addEventListener('click', function () {
+      copyToClipboard(el('rs-gen-prompt-ext-texto').textContent, el('rs-gen-prompt-ext-copy-btn'));
+    });
+    el('rs-gen-resultado-externo-file').addEventListener('change', handleResultadoExternoChange);
     el('logo-file').addEventListener('change', handleLogoFileChange);
     el('logo-subir-btn').addEventListener('click', handleSubirLogo);
     el('carpeta-crear-btn').addEventListener('click', handleCrearCarpeta);
