@@ -79,6 +79,11 @@ module.exports = async function handler(req, res) {
         if (error) throw error;
         return res.status(200).json({ data: data || [] });
       }
+      if (tipo === 'carpetas') {
+        const { data, error } = await supabase.from('carpetas').select('*').order('nombre', { ascending: true });
+        if (error) throw error;
+        return res.status(200).json({ data: data || [] });
+      }
       return res.status(400).json({ error: 'tipo desconocido' });
     }
 
@@ -148,6 +153,25 @@ module.exports = async function handler(req, res) {
         const id = body.id;
         if (!id) return res.status(400).json({ error: 'Falta id' });
         const { error } = await supabase.from('logos').delete().eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true });
+      }
+
+      if (accion === 'crearCarpeta') {
+        const nombre = String(body.nombre || '').trim().slice(0, 120);
+        if (!nombre) return res.status(400).json({ error: 'Falta el nombre' });
+        const { data, error } = await supabase.from('carpetas').insert({ nombre }).select().single();
+        if (error) {
+          if (error.code === '23505') return res.status(400).json({ error: 'Ya existe una carpeta con ese nombre' });
+          throw error;
+        }
+        return res.status(200).json({ ok: true, data });
+      }
+
+      if (accion === 'eliminarCarpeta') {
+        const id = body.id;
+        if (!id) return res.status(400).json({ error: 'Falta id' });
+        const { error } = await supabase.from('carpetas').delete().eq('id', id);
         if (error) throw error;
         return res.status(200).json({ ok: true });
       }

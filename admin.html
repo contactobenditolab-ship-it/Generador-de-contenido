@@ -79,6 +79,9 @@ input[type="file"]{display:none;}
 .rs-gallery-actions{position:absolute;top:4px;left:4px;display:flex;gap:4px;}
 .rs-gallery-actions button{width:20px;height:20px;border-radius:50%;background:rgba(23,35,63,.75);color:#fff;border:none;font-size:11px;cursor:pointer;padding:0;line-height:1;}
 .rs-gallery-actions button:hover{background:#17233F;}
+.carpeta-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F0EDE6;font-size:13px;}
+.carpeta-row button{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid #ccc;background:#fff;color:#888;cursor:pointer;}
+.carpeta-row button:hover{background:#C0392B;color:#fff;border-color:#C0392B;}
 .rs-gen-preview{width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:none;}
 .rs-gen-status{font-size:12px;color:#888;text-align:center;margin-top:8px;min-height:16px;}
 .rs-result-block{background:#F4F1E6;border-left:4px solid #E3A29C;border-radius:6px;padding:12px;margin-bottom:10px;}
@@ -113,6 +116,7 @@ input[type="file"]{display:none;}
     <button class="rs-tab" data-rs-tab="insp">Inspiración</button>
     <button class="rs-tab" data-rs-tab="cal">📅 Calendario</button>
     <button class="rs-tab" data-rs-tab="logos">🖼️ Logos</button>
+    <button class="rs-tab" data-rs-tab="carpetas">📁 Carpetas</button>
   </div>
 
   <div class="rs-folder-bar" id="rs-folder-bar" style="display:none;">
@@ -155,6 +159,22 @@ input[type="file"]{display:none;}
     </div>
   </div>
 
+  <div class="rs-panel" data-rs-panel="carpetas">
+    <div class="card" style="max-width:480px;">
+      <div class="card-title">📁 Nueva carpeta</div>
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="carpeta-nombre" placeholder="Ej: Boda García, Campaña Navidad…">
+      </div>
+      <button class="save-btn" id="carpeta-crear-btn" style="width:100%;margin-top:6px;">Crear carpeta</button>
+      <div class="rs-gen-status" id="carpeta-status"></div>
+    </div>
+    <div class="card" style="max-width:480px;">
+      <div class="card-title">Carpetas</div>
+      <div id="carpetas-lista"></div>
+    </div>
+  </div>
+
   <div class="rs-panel" data-rs-panel="ai">
     <div class="card" style="max-width:480px;">
       <div class="card-title">🤖 Generador con IA</div>
@@ -193,9 +213,8 @@ input[type="file"]{display:none;}
 
       <div class="field">
         <label>Carpeta / categoría (opcional)</label>
-        <input type="text" id="rs-gen-carpeta" placeholder="Ej: Boda García, Campaña Navidad…" list="rs-carpetas-list">
-        <datalist id="rs-carpetas-list"></datalist>
-        <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Podrás filtrar por ella en el archivo y en el calendario.</div>
+        <select id="rs-gen-carpeta"><option value="">— Ninguna —</option></select>
+        <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Se crean en la pestaña 📁 Carpetas. Podrás filtrar por ella en el archivo y en el calendario.</div>
       </div>
 
       <div class="field">

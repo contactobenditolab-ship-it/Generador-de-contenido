@@ -21,6 +21,7 @@
     allPosts: [],
     allInspirations: [],
     allLogos: [],
+    allCarpetas: [],
     folderFilter: '',
     editingPostId: null, // si se está reeditando la imagen de un post ya guardado (en vez de crear uno nuevo)
   };
@@ -49,6 +50,7 @@
     loadFeeds();
     loadGallery();
     loadLogos();
+    loadCarpetas();
   }
 
   // ── FEEDS (IG / LI / WA) ──────────────────────────────
@@ -83,8 +85,6 @@
       carpetas.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
     select.value = carpetas.indexOf(prev) !== -1 ? prev : '';
     state.folderFilter = select.value;
-
-    el('rs-carpetas-list').innerHTML = carpetas.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
   }
 
   function renderAllFeeds() {
@@ -694,6 +694,64 @@
     }
   }
 
+  // ── CARPETAS ───────────────────────────────────────────
+  async function loadCarpetas() {
+    var lista = el('carpetas-lista');
+    var select = el('rs-gen-carpeta');
+    try {
+      var d = await BL_API.benditoGet('carpetas');
+      state.allCarpetas = d.data || [];
+    } catch (e) {
+      lista.innerHTML = '<p class="rs-feed-empty">Error cargando carpetas: ' + esc(e.message) + '</p>';
+      return;
+    }
+    lista.innerHTML = state.allCarpetas.length
+      ? state.allCarpetas.map(function (c) {
+          return '<div class="carpeta-row"><span>' + esc(c.nombre) + '</span>' +
+            '<button data-del-carpeta-id="' + c.id + '">Eliminar</button></div>';
+        }).join('')
+      : '<p class="rs-feed-empty">Todavía no has creado ninguna carpeta.</p>';
+    lista.querySelectorAll('[data-del-carpeta-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () { eliminarCarpeta(btn.dataset.delCarpetaId); });
+    });
+
+    var actual = select.value;
+    select.innerHTML = '<option value="">— Ninguna —</option>' +
+      state.allCarpetas.map(function (c) { return '<option value="' + esc(c.nombre) + '">' + esc(c.nombre) + '</option>'; }).join('');
+    select.value = actual;
+  }
+
+  async function handleCrearCarpeta() {
+    var nombre = el('carpeta-nombre').value.trim();
+    if (!nombre) {
+      el('carpeta-status').textContent = 'Escribe un nombre.';
+      return;
+    }
+    var btn = el('carpeta-crear-btn');
+    btn.disabled = true;
+    el('carpeta-status').textContent = 'Creando…';
+    try {
+      await BL_API.benditoPost({ accion: 'crearCarpeta', nombre: nombre });
+      el('carpeta-nombre').value = '';
+      el('carpeta-status').textContent = '✓ Carpeta creada.';
+      loadCarpetas();
+    } catch (e) {
+      el('carpeta-status').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function eliminarCarpeta(id) {
+    if (!confirm('¿Eliminar esta carpeta? Los posts que ya la tenían asignada mantienen el nombre igualmente, solo deja de estar en la lista.')) return;
+    try {
+      await BL_API.benditoPost({ accion: 'eliminarCarpeta', id: id });
+      loadCarpetas();
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message);
+    }
+  }
+
   // ── WIRING ─────────────────────────────────────────────
   // ensureLoaded() NO se llama aquí: en DOMContentLoaded todavía no hay
   // sesión (la pantalla de login está encima). admin.html llama a
@@ -709,6 +767,8 @@
     el('rs-gen-ia-btn').addEventListener('click', handleEditarConIA);
     el('logo-file').addEventListener('change', handleLogoFileChange);
     el('logo-subir-btn').addEventListener('click', handleSubirLogo);
+    el('carpeta-crear-btn').addEventListener('click', handleCrearCarpeta);
+    el('carpeta-nombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') handleCrearCarpeta(); });
     el('rs-gen-logo-select').addEventListener('change', function (e) {
       if (e.target.value) {
         state.logoInfo = null; // solo una fuente de logo a la vez
