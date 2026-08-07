@@ -34,15 +34,27 @@ funciones serverless en `api/` y Supabase como base de datos.
   Lab"), separado del calendario principal (`primary`) que usa
   `bendito-os` — reutiliza el mismo refresh_token ya guardado en la tabla
   `google_drive_auth`, no hace falta volver a autorizar nada aquí.
+- `lib/pdf-post.js` — genera un PDF de una página por post (imagen + copy de
+  cada canal) con `pdf-lib`.
+- `lib/google-drive.js` — sube ese PDF a Google Drive, en
+  `Contenido/Redes sociales` dentro de la misma carpeta raíz que usa
+  `bendito-os` (la crea sola la primera vez). Mismo refresh_token que
+  `lib/google-calendar.js`, no requiere autorización aparte.
 - `supabase/schema.sql` — tablas `posts` e `inspirations` (las columnas
-  `fecha_programada` y `gcal_id` de `posts`, la tabla `logos`, y la columna
-  `redes_calendar_id` de `google_drive_auth` se añadieron después por
-  migración directa en Supabase, no están en este archivo).
+  `fecha_programada`, `gcal_id`, `variantes` y `prompt_edicion_externa` de
+  `posts`, la tabla `logos`, la tabla `carpetas`, la tabla
+  `configuracion_generador`, y la columna `redes_calendar_id` de
+  `google_drive_auth` se añadieron después por migración directa en
+  Supabase, no están en este archivo).
 
 La pestaña "📅 Calendario" del panel muestra pendientes (imágenes sin copy,
 posts sin fecha, posts con fecha pasada sin marcar publicados) y una
 agenda de los posts programados. La pestaña "🖼️ Logos" es una librería de
-logos reutilizables para elegir al editar una imagen con IA.
+logos reutilizables para elegir al editar una imagen con IA. La pestaña
+"⚙️ Ajustes" permite editar la dirección creativa que se le pasa a la IA
+en cada llamada (prompt, copy, edición de imagen), guardada en
+`configuracion_generador` — si no hay nada guardado, se usa el valor por
+defecto de `lib/bendito-prompts.js`.
 
 ## Variables de entorno (Vercel)
 

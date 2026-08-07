@@ -13,6 +13,8 @@ const { callGeminiVisionJSON } = require('../lib/gemini-text');
 const { DIRECCION_CREATIVA_DEFAULT, promptSugerirSystem, copySystem, promptEdicionExternaSystem } = require('../lib/bendito-prompts');
 const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
+const { generarPdfPost } = require('../lib/pdf-post');
+const { subirPdfARedesSociales } = require('../lib/google-drive');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
@@ -309,6 +311,26 @@ module.exports = async function handler(req, res) {
         if (error) throw error;
         if (existente?.gcal_id) eliminarEventoPost(existente.gcal_id).catch(() => {});
         return res.status(200).json({ ok: true });
+      }
+
+      if (accion === 'descargarPdfPost') {
+        const id = body.id;
+        if (!id) return res.status(400).json({ error: 'Falta id' });
+        const { data: post, error: e1 } = await supabase.from('posts').select('*').eq('id', id).maybeSingle();
+        if (e1) throw e1;
+        if (!post) return res.status(404).json({ error: 'Post no encontrado' });
+
+        const buffer = await generarPdfPost(post);
+        const nombreArchivo = (post.carpeta ? post.carpeta + ' — ' : '') + (post.sub || post.cuenta) + '.pdf';
+
+        let driveLink = null;
+        try {
+          driveLink = await subirPdfARedesSociales(nombreArchivo.replace(/[\\/]/g, '-'), buffer);
+        } catch (e) {
+          console.error('No se pudo subir el PDF a Drive:', e.message);
+        }
+
+        return res.status(200).json({ ok: true, pdf_base64: buffer.toString('base64'), drive_link: driveLink });
       }
 
       if (accion === 'actualizarPost') {

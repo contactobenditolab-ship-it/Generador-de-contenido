@@ -617,8 +617,10 @@
       metaRowHtml(p) +
       '<div style="display:flex;gap:8px;margin-top:12px;">' +
       '<button class="save-btn" id="cal-modal-editar-btn" style="flex:1;">✎ Editar imagen con IA</button>' +
+      '<button class="save-btn" id="cal-modal-pdf-btn" style="flex:1;background:#fff;">📄 PDF</button>' +
       '<button class="rs-post-del" id="cal-modal-borrar-btn" style="position:static;width:auto;border-radius:20px;padding:0 14px;font-size:12px;">Eliminar</button>' +
       '</div>' +
+      '<div class="rs-gen-status" id="cal-modal-pdf-status"></div>' +
       '</div>';
 
     overlay.style.display = 'flex';
@@ -641,6 +643,39 @@
       cerrarPostModal();
       deletePost(p.id);
     });
+    el('cal-modal-pdf-btn').addEventListener('click', function () { descargarPdfPost(p.id); });
+  }
+
+  async function descargarPdfPost(id) {
+    var btn = el('cal-modal-pdf-btn');
+    var statusEl = el('cal-modal-pdf-status');
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Generando PDF y subiéndolo a Drive…';
+    try {
+      var result = await BL_API.benditoPost({ accion: 'descargarPdfPost', id: id });
+      var byteChars = atob(result.pdf_base64);
+      var bytes = new Uint8Array(byteChars.length);
+      for (var i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      var blob = new Blob([bytes], { type: 'application/pdf' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'post-' + id + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+      if (statusEl) {
+        statusEl.textContent = result.drive_link
+          ? '✓ Descargado y subido a Drive (Contenido/Redes sociales).'
+          : '✓ Descargado. No se pudo subir a Drive (revisa la conexión en Configuración → Drive de bendito-os).';
+      }
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+      else alert('Error generando el PDF: ' + e.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   function cerrarPostModal() {
