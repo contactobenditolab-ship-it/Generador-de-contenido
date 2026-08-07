@@ -266,11 +266,39 @@
   }
 
   // El "ojo" de Bendito Lab como icono de cuenta: azul para Bendito Lab, amarillo para Dilo Bonito.
+  // El "ojo" de Bendito Lab con rayos, como icono de cuenta: azul para
+  // Bendito Lab, amarillo para Dilo Bonito. No hay un SVG de este diseño
+  // en los repos (solo se pasó como imagen), así que está recreado a mano
+  // — mismo estilo (ojo almendrado + pupila con dos brillos + rayos
+  // radiales de longitud alterna).
+  var OJO_RAYOS_CACHE = {};
+  function construirRayosOjo() {
+    var rayos = '';
+    var n = 16;
+    for (var i = 0; i < n; i++) {
+      var angulo = (Math.PI * 2 * i) / n;
+      var largo = i % 2 === 0 ? 13 : 8;
+      var rInterno = 15;
+      var rExterno = rInterno + largo;
+      var x1 = 32 + Math.cos(angulo) * rInterno;
+      var y1 = 32 + Math.sin(angulo) * rInterno;
+      var x2 = 32 + Math.cos(angulo) * rExterno;
+      var y2 = 32 + Math.sin(angulo) * rExterno;
+      rayos += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>';
+    }
+    return rayos;
+  }
+
   function ojoLogoHtml(cuenta) {
     var color = cuenta === 'dilobonito' ? 'var(--yellow)' : 'var(--blue)';
-    return '<svg viewBox="0 0 32 32" width="18" height="18" style="color:' + color + ';flex-shrink:0;">' +
-      '<path d="M2 16c3.2-6.2 8.8-9.5 14-9.5S26.8 9.8 30 16c-3.2 6.2-8.8 9.5-14 9.5S5.2 22.2 2 16Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>' +
-      '<circle cx="16" cy="16" r="5" fill="currentColor"/></svg>';
+    if (!OJO_RAYOS_CACHE.svg) OJO_RAYOS_CACHE.svg = construirRayosOjo();
+    return '<svg viewBox="0 0 64 64" width="20" height="20" style="color:' + color + ';flex-shrink:0;">' +
+      OJO_RAYOS_CACHE.svg +
+      '<path d="M14 32C20 24 26 20 32 20S44 24 50 32C44 40 38 44 32 44S20 40 14 32Z" fill="#fff" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>' +
+      '<circle cx="32" cy="32" r="8" fill="currentColor"/>' +
+      '<circle cx="34.5" cy="29" r="2.2" fill="#fff"/>' +
+      '<circle cx="30.5" cy="32.5" r="1" fill="#fff"/>' +
+      '</svg>';
   }
 
   function postCardHtml(channel, p) {
