@@ -646,11 +646,13 @@
     el('cal-modal-pdf-btn').addEventListener('click', function () { descargarPdfPost(p.id); });
   }
 
-  async function descargarPdfPost(id) {
-    var btn = el('cal-modal-pdf-btn');
-    var statusEl = el('cal-modal-pdf-status');
+  async function descargarPdfPost(id, opciones) {
+    opciones = opciones || {};
+    var btn = opciones.btnEl || el('cal-modal-pdf-btn');
+    var statusEl = opciones.statusEl || el('cal-modal-pdf-status');
+    var setStatus = opciones.setStatus || function (msg) { if (statusEl) statusEl.textContent = msg; };
     if (btn) btn.disabled = true;
-    if (statusEl) statusEl.textContent = 'Generando PDF y subiéndolo a Drive…';
+    setStatus('Generando PDF (post + versión de trabajo) y subiéndolos a Drive…');
     try {
       var result = await BL_API.benditoPost({ accion: 'descargarPdfPost', id: id });
       var byteChars = atob(result.pdf_base64);
@@ -665,14 +667,13 @@
       a.click();
       a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
-      if (statusEl) {
-        statusEl.textContent = result.drive_link
-          ? '✓ Descargado y subido a Drive (Contenido/Redes sociales).'
-          : '✓ Descargado. No se pudo subir a Drive (revisa la conexión en Configuración → Drive de bendito-os).';
+      if (result.drive_link || result.drive_link_pendiente) {
+        setStatus('✓ PDF descargado y subido a Drive (Redes sociales' + (result.drive_link_pendiente ? ' + Pendiente redes sociales' : '') + ').');
+      } else {
+        setStatus('✓ PDF descargado. No se pudo subir a Drive (revisa la conexión en Configuración → Drive de bendito-os).');
       }
     } catch (e) {
-      if (statusEl) statusEl.textContent = 'Error: ' + e.message;
-      else alert('Error generando el PDF: ' + e.message);
+      setStatus('Error generando el PDF: ' + e.message);
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -1002,6 +1003,9 @@
       }
     }
 
+    var logoUrl = state.logoInfo ? null : (el('rs-gen-logo-select').value || null); // solo se guarda si es un logo de la librería (ya tiene URL)
+    var postGuardadoId = null;
+
     try {
       if (editando) {
         var patch = { id: state.editingPostId, image_url: finalImageUrl };
@@ -1012,7 +1016,9 @@
         }
         patch.carpeta = el('rs-gen-carpeta').value.trim() || null;
         patch.fecha_programada = el('rs-gen-fecha').value || null;
-        await BL_API.benditoPost(Object.assign({ accion: 'actualizarPost' }, patch));
+        if (logoUrl) patch.logo_url = logoUrl;
+        var resPatch = await BL_API.benditoPost(Object.assign({ accion: 'actualizarPost' }, patch));
+        postGuardadoId = resPatch.data.id;
         setGenStatus('✓ Post actualizado.');
       } else {
         var post = {
@@ -1032,14 +1038,19 @@
           carpeta: el('rs-gen-carpeta').value.trim() || null,
           fecha_programada: el('rs-gen-fecha').value || null,
           prompt_edicion_externa: el('rs-gen-prompt-ext-texto').textContent || null,
+          logo_url: logoUrl,
         };
-        await BL_API.benditoPost({ accion: 'crearPost', post: post, inspiration_id: state.inspirationId });
+        var resCrear = await BL_API.benditoPost({ accion: 'crearPost', post: post, inspiration_id: state.inspirationId });
+        postGuardadoId = resCrear.data.id;
         setGenStatus('✓ Guardado en el archivo.');
       }
       resetGenForm();
       loadFeeds();
       loadGallery();
       switchTab('ig');
+      if (postGuardadoId) {
+        descargarPdfPost(postGuardadoId, { setStatus: setGenStatus });
+      }
     } catch (e) {
       setGenStatus('Error al guardar el post: ' + e.message);
     } finally {

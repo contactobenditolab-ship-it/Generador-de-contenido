@@ -13,8 +13,8 @@ const { callGeminiVisionJSON } = require('../lib/gemini-text');
 const { DIRECCION_CREATIVA_DEFAULT, promptSugerirSystem, copySystem, promptEdicionExternaSystem } = require('../lib/bendito-prompts');
 const { editarImagenConIA, asegurarFondoTransparente } = require('../lib/gemini-image');
 const { sincronizarPostCalendar, eliminarEventoPost } = require('../lib/google-calendar');
-const { generarPdfPost } = require('../lib/pdf-post');
-const { subirPdfARedesSociales } = require('../lib/google-drive');
+const { generarPdfFinal, generarPdfPendiente } = require('../lib/pdf-post');
+const { subirPdfAContenido } = require('../lib/google-drive');
 
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
@@ -285,6 +285,8 @@ module.exports = async function handler(req, res) {
           fecha_programada: d.fecha_programada || null,
           carpeta: d.carpeta ? String(d.carpeta).slice(0, 120) : null,
           prompt_edicion_externa: d.prompt_edicion_externa || null,
+          inspiration_id: body.inspiration_id || null,
+          logo_url: d.logo_url || null,
         };
         const { data, error } = await supabase.from('posts').insert(post).select().single();
         if (error) throw error;
@@ -320,17 +322,31 @@ module.exports = async function handler(req, res) {
         if (e1) throw e1;
         if (!post) return res.status(404).json({ error: 'Post no encontrado' });
 
-        const buffer = await generarPdfPost(post);
-        const nombreArchivo = (post.carpeta ? post.carpeta + ' — ' : '') + (post.sub || post.cuenta) + '.pdf';
+        let inspiracion = null;
+        if (post.inspiration_id) {
+          const { data } = await supabase.from('inspirations').select('image_url, prompt').eq('id', post.inspiration_id).maybeSingle();
+          inspiracion = data || null;
+        }
 
-        let driveLink = null;
+        const nombreBase = ((post.carpeta ? post.carpeta + ' — ' : '') + (post.sub || post.cuenta)).replace(/[\\/]/g, '-');
+        const bufferFinal = await generarPdfFinal(post);
+        const bufferPendiente = await generarPdfPendiente(post, inspiracion);
+
+        let driveLinkFinal = null;
+        let driveLinkPendiente = null;
         try {
-          driveLink = await subirPdfARedesSociales(nombreArchivo.replace(/[\\/]/g, '-'), buffer);
+          driveLinkFinal = await subirPdfAContenido(nombreBase + '.pdf', bufferFinal, 'Redes sociales');
+          driveLinkPendiente = await subirPdfAContenido(nombreBase + ' (pendiente).pdf', bufferPendiente, 'Pendiente redes sociales');
         } catch (e) {
           console.error('No se pudo subir el PDF a Drive:', e.message);
         }
 
-        return res.status(200).json({ ok: true, pdf_base64: buffer.toString('base64'), drive_link: driveLink });
+        return res.status(200).json({
+          ok: true,
+          pdf_base64: bufferFinal.toString('base64'),
+          drive_link: driveLinkFinal,
+          drive_link_pendiente: driveLinkPendiente,
+        });
       }
 
       if (accion === 'actualizarPost') {
@@ -341,6 +357,7 @@ module.exports = async function handler(req, res) {
         if (body.carpeta !== undefined) patch.carpeta = body.carpeta ? String(body.carpeta).slice(0, 120) : null;
         if (body.fecha_programada !== undefined) patch.fecha_programada = body.fecha_programada || null;
         if (body.prompt_edicion_externa !== undefined) patch.prompt_edicion_externa = body.prompt_edicion_externa;
+        if (body.logo_url !== undefined) patch.logo_url = body.logo_url;
 
         if (body.image_url !== undefined) {
           // Al cambiar la imagen "portada" de un post ya guardado, la

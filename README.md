@@ -41,11 +41,20 @@ funciones serverless en `api/` y Supabase como base de datos.
   `bendito-os` (la crea sola la primera vez). Mismo refresh_token que
   `lib/google-calendar.js`, no requiere autorización aparte.
 - `supabase/schema.sql` — tablas `posts` e `inspirations` (las columnas
-  `fecha_programada`, `gcal_id`, `variantes` y `prompt_edicion_externa` de
-  `posts`, la tabla `logos`, la tabla `carpetas`, la tabla
-  `configuracion_generador`, y la columna `redes_calendar_id` de
-  `google_drive_auth` se añadieron después por migración directa en
-  Supabase, no están en este archivo).
+  `fecha_programada`, `gcal_id`, `variantes`, `prompt_edicion_externa`,
+  `inspiration_id` y `logo_url` de `posts`, la tabla `logos`, la tabla
+  `carpetas`, la tabla `configuracion_generador`, y la columna
+  `redes_calendar_id` de `google_drive_auth` se añadieron después por
+  migración directa en Supabase, no están en este archivo).
+
+Al pulsar "✓ Guardar en el archivo" se generan y suben automáticamente DOS
+PDF a Drive (`lib/pdf-post.js` + `lib/google-drive.js`): uno "limpio" con
+solo las imágenes del post (portada + variantes/carrusel) y el copy, en
+`Contenido/Redes sociales`; y otro "de trabajo" con además los prompts, la
+imagen de inspiración original y el logo usado, en
+`Contenido/Pendiente redes sociales` — para poder retomar la edición en
+otra IA sin tener que volver a esta app a buscar cada pieza suelta. El
+primero (el limpio) también se descarga automáticamente en el navegador.
 
 La pestaña "📅 Calendario" del panel muestra pendientes (imágenes sin copy,
 posts sin fecha, posts con fecha pasada sin marcar publicados) y una
