@@ -455,6 +455,91 @@
     }
   }
 
+  // ── PNG a 300ppp ───────────────────────────────────────
+  var CRC_TABLE = (function () {
+    var table = [];
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+  function crc32(bytes) {
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function u32(n) { return [(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF]; }
+
+  /** Inserta (o sustituye) el chunk pHYs de un PNG para que quede marcado a 300ppp — necesario para imprenta, no cambia los píxeles reales. */
+  function pngA300ppp(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer);
+    var PNG_SIG_LEN = 8;
+    var pixelsPorMetro = Math.round(300 / 0.0254); // 300ppp -> px/m
+    var chunkData = new Uint8Array(9);
+    chunkData.set(u32(pixelsPorMetro), 0);
+    chunkData.set(u32(pixelsPorMetro), 4);
+    chunkData[8] = 1; // unidad: metro
+    var typeAndData = new Uint8Array(4 + 9);
+    typeAndData.set([0x70, 0x48, 0x59, 0x73], 0); // "pHYs"
+    typeAndData.set(chunkData, 4);
+    var crc = crc32(typeAndData);
+    var physChunk = new Uint8Array(4 + 4 + 9 + 4);
+    physChunk.set(u32(9), 0);
+    physChunk.set(typeAndData, 4);
+    physChunk.set(u32(crc), 4 + typeAndData.length);
+
+    // El primer chunk siempre es IHDR (13 bytes de datos), justo tras la firma.
+    var ihdrLen = (bytes[PNG_SIG_LEN] << 24) | (bytes[PNG_SIG_LEN + 1] << 16) | (bytes[PNG_SIG_LEN + 2] << 8) | bytes[PNG_SIG_LEN + 3];
+    var afterIhdr = PNG_SIG_LEN + 4 + 4 + ihdrLen + 4;
+
+    var siguienteEsPhys = bytes[afterIhdr + 4] === 0x70 && bytes[afterIhdr + 5] === 0x48 && bytes[afterIhdr + 6] === 0x59 && bytes[afterIhdr + 7] === 0x73;
+    if (siguienteEsPhys) {
+      var largoExistente = (bytes[afterIhdr] << 24) | (bytes[afterIhdr + 1] << 16) | (bytes[afterIhdr + 2] << 8) | bytes[afterIhdr + 3];
+      var finExistente = afterIhdr + 4 + 4 + largoExistente + 4;
+      var out = new Uint8Array(bytes.length - (finExistente - afterIhdr) + physChunk.length);
+      out.set(bytes.subarray(0, afterIhdr), 0);
+      out.set(physChunk, afterIhdr);
+      out.set(bytes.subarray(finExistente), afterIhdr + physChunk.length);
+      return out.buffer;
+    }
+    var out2 = new Uint8Array(bytes.length + physChunk.length);
+    out2.set(bytes.subarray(0, afterIhdr), 0);
+    out2.set(physChunk, afterIhdr);
+    out2.set(bytes.subarray(afterIhdr), afterIhdr + physChunk.length);
+    return out2.buffer;
+  }
+
+  async function descargarLogo(url, nombre) {
+    try {
+      var res = await fetch(url);
+      var buffer = await res.arrayBuffer();
+      var esPng = (res.headers.get('content-type') || '').indexOf('png') !== -1 || url.split('?')[0].toLowerCase().endsWith('.png');
+      var finalBuffer = esPng ? pngA300ppp(buffer) : buffer;
+      var blob = new Blob([finalBuffer], { type: esPng ? 'image/png' : (res.headers.get('content-type') || 'image/png') });
+      var filename = (nombre || 'logo').replace(/[^a-zA-Z0-9_-]+/g, '_') + (esPng ? '.png' : '');
+
+      var file = new File([blob], filename, { type: blob.type });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 5000);
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      alert('Error al descargar el logo: ' + e.message);
+    }
+  }
+
   async function hashArchivo(file) {
     var buffer = await file.arrayBuffer();
     var digest = await crypto.subtle.digest('SHA-256', buffer);
@@ -1181,10 +1266,16 @@
     } else {
       grid.innerHTML = state.allLogos.map(function (l) {
         return '<div class="rs-gallery-item"><img src="' + esc(l.image_url) + '" title="' + esc(l.nombre) + '">' +
-          '<button class="rs-post-del" data-del-logo-id="' + l.id + '">×</button></div>';
+          '<div class="rs-gallery-actions">' +
+          '<button data-descargar-logo-url="' + esc(l.image_url) + '" data-descargar-logo-nombre="' + esc(l.nombre) + '" title="Descargar (fondo transparente, 300ppp)">⬇</button>' +
+          '<button data-del-logo-id="' + l.id + '" title="Eliminar">×</button>' +
+          '</div></div>';
       }).join('');
       grid.querySelectorAll('[data-del-logo-id]').forEach(function (btn) {
         btn.addEventListener('click', function () { eliminarLogo(btn.dataset.delLogoId); });
+      });
+      grid.querySelectorAll('[data-descargar-logo-url]').forEach(function (btn) {
+        btn.addEventListener('click', function () { descargarLogo(btn.dataset.descargarLogoUrl, btn.dataset.descargarLogoNombre); });
       });
     }
     select.innerHTML = '<option value="">— Ninguno —</option>' +
