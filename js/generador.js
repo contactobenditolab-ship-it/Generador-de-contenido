@@ -427,15 +427,29 @@
     try {
       var res = await fetch(url);
       var blob = await res.blob();
+      var nombre = url.split('/').pop().split('?')[0] || 'imagen';
+
+      // Móvil: si el navegador soporta compartir archivos, se abre la
+      // ventana nativa de "Compartir" — ahí el usuario elige "Guardar en
+      // Fotos"/"Guardar imagen", que sí escribe en el carrete. Un simple
+      // <a download> desde la web NO puede escribir en el carrete
+      // directamente (restricción del navegador), solo va a Descargas.
+      var file = new File([blob], nombre, { type: blob.type || 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+
       var objectUrl = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = objectUrl;
-      a.download = url.split('/').pop().split('?')[0] || 'imagen';
+      a.download = nombre;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 5000);
     } catch (e) {
+      if (e.name === 'AbortError') return; // el usuario canceló el share sheet, no es un error real
       alert('Error al descargar: ' + e.message);
     }
   }
