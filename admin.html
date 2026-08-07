@@ -179,6 +179,7 @@ input[type="file"]{display:none;}
     <button class="rs-tab" data-rs-tab="cal">📅 Calendario</button>
     <button class="rs-tab" data-rs-tab="logos">🖼️ Logos</button>
     <button class="rs-tab" data-rs-tab="carpetas">📁 Carpetas</button>
+    <button class="rs-tab" data-rs-tab="ayuda">❓ Cómo funciona</button>
   </div>
 
   <div class="rs-folder-bar" id="rs-folder-bar" style="display:none;">
@@ -250,6 +251,45 @@ input[type="file"]{display:none;}
     <div class="card" style="max-width:480px;">
       <div class="card-title">Carpetas</div>
       <div id="carpetas-lista"></div>
+    </div>
+  </div>
+
+  <div class="rs-panel" data-rs-panel="ayuda">
+    <div class="card" style="max-width:680px;">
+      <div class="card-title">❓ Cómo funciona — de la imagen a la publicación</div>
+
+      <div style="font-size:13px;font-weight:600;line-height:1.7;">
+        <p><strong>1. Sube o crea una imagen de inspiración</strong><br>
+        En 🖼️ Inspiración puedes subir varias fotos de golpe (como un tablón tipo Pinterest), o ir directo a 🤖 Generador IA y subir una sola imagen ahí — esa segunda opción además analiza la foto automáticamente y sugiere un prompt.</p>
+
+        <p><strong>2. Genera o revisa el prompt</strong><br>
+        Al subir la imagen en el Generador IA se rellena solo el campo "Prompt" (descripción para el copywriter). Si la imagen viene de una subida en lote sin analizar, usa el botón "🔄 Sugerir prompt" para generarlo sin tener que resubir el archivo.</p>
+
+        <p><strong>3. Genera el copy</strong><br>
+        Elige la cuenta (Bendito Lab o Dilo Bonito) y el formato principal, y pulsa "Generar con IA". Se escribe el texto para Instagram, LinkedIn, WhatsApp y Stories siguiendo la dirección creativa de la marca.</p>
+
+        <p><strong>4. (Opcional) Integra un logo o cambia la imagen</strong><br>
+        Tienes dos caminos, según si la edición de imagen con IA (Gemini) está disponible o no:</p>
+        <ul style="margin:0 0 12px;padding-left:20px;">
+          <li><strong>🪄 Editar con IA</strong>: la IA integra el logo/texto directamente en la foto (necesita cuota de Gemini con facturación activa).</li>
+          <li><strong>📝 Solo generar prompt</strong>: escribe un prompt de texto (sin gastar cuota de imagen) para pegarlo en Midjourney, ChatGPT u otra IA fuera de aquí. Puedes "💾 Guardar" ese prompt para no perderlo. Cuando tengas el resultado, súbelo con "📤 Elegir imagen(es) final(es)" — puedes subir varias y elegir cuál usar.</li>
+        </ul>
+
+        <p><strong>5. Añade carpeta y fecha (opcional)</strong><br>
+        La carpeta/categoría agrupa posts por cliente o campaña (créalas en 📁 Carpetas). Si pones una fecha de publicación, se crea un evento en un calendario de Google separado ("Redes sociales · Bendito Lab"), sin mezclarse con el calendario principal de bendito-os.</p>
+
+        <p><strong>6. Guarda en el archivo</strong><br>
+        "✓ Guardar en el archivo" crea el post con todo lo anterior. A partir de ahí aparece en las pestañas Instagram / LinkedIn / WhatsApp, y en 📅 Calendario si le pusiste fecha.</p>
+
+        <p><strong>7. Publica manualmente en cada red</strong><br>
+        Esta app no publica sola en Instagram/LinkedIn/WhatsApp — genera el contenido, pero la publicación real la haces tú desde cada red. En la tarjeta del post usa "Copiar copy" para llevarte el texto, y descarga o abre la imagen desde ahí.</p>
+
+        <p><strong>8. Marca como publicado</strong><br>
+        Una vez subido a la red social de verdad, pulsa "Marcar como publicado" en la tarjeta del post (o desde el calendario). Así 📅 Calendario deja de avisarte de que está pendiente.</p>
+
+        <p><strong>Variantes de imagen</strong><br>
+        Cada post puede guardar varias imágenes (no solo la portada). Desde la tarjeta del post en el feed, el botón "🖼️ Variantes" te deja cambiar la portada al instante; desde ✎ "Editar imagen con IA" puedes añadir variantes nuevas o elegir cuál usar como base para seguir trabajando.</p>
+      </div>
     </div>
   </div>
 
