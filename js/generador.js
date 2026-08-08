@@ -1171,7 +1171,14 @@
 
   async function handleSavePost() {
     var editando = !!state.editingPostId;
-    if (!state.imageUrl || (!state.genResult && !editando)) return;
+    if (!state.imageUrl) {
+      setGenStatus('Sube primero una imagen base antes de guardar.');
+      return;
+    }
+    if (!state.genResult && !editando) {
+      setGenStatus('Genera el copy con IA ("Generar con IA") antes de guardar — aunque luego uses una imagen de otra IA, hace falta el copy generado para crear el post.');
+      return;
+    }
     var cuenta = el('rs-gen-cuenta').value;
     var isDilo = cuenta === 'dilobonito';
     var prompt = el('rs-gen-prompt').value;
