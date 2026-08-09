@@ -142,6 +142,14 @@
       state.inspirationId = null;
       state.genResult = null;
       state.editingPostId = post.id;
+      // Limpia cualquier edición IA / resultado externo que quedara de una
+      // imagen anterior sin guardar — si no, al pulsar "Guardar" se cuela
+      // esa imagen vieja en vez de la de este post.
+      state.iaEditedInfo = null;
+      state.resultadosExternos = [];
+      el('rs-gen-ia-preview').style.display = 'none';
+      el('rs-gen-resultados-externos-grid').innerHTML = '';
+      el('rs-gen-prompt-ext-box').style.display = 'none';
       el('rs-gen-preview').src = info.dataUrl;
       el('rs-gen-preview').style.display = 'block';
       el('rs-gen-prompt').value = post.sub || '';
@@ -194,6 +202,13 @@
       var info = await urlToBase64(url);
       state.imageInfo = info;
       state.imageUrl = url;
+      // Igual que al abrir un post: si había una edición IA / resultado
+      // externo sin guardar de la imagen anterior, se descarta — la base
+      // ahora es esta variante.
+      state.iaEditedInfo = null;
+      state.resultadosExternos = [];
+      el('rs-gen-ia-preview').style.display = 'none';
+      el('rs-gen-resultados-externos-grid').innerHTML = '';
       el('rs-gen-preview').src = info.dataUrl;
       el('rs-gen-preview').style.display = 'block';
       renderVariantesPost();
@@ -638,6 +653,12 @@
       state.inspirationId = insp.id;
       state.genResult = null;
       state.editingPostId = null;
+      // Limpia cualquier edición IA / resultado externo que quedara de una
+      // imagen anterior sin guardar.
+      state.iaEditedInfo = null;
+      state.resultadosExternos = [];
+      el('rs-gen-ia-preview').style.display = 'none';
+      el('rs-gen-resultados-externos-grid').innerHTML = '';
       el('rs-post-variantes-box').style.display = 'none';
       el('rs-gen-preview').src = info.dataUrl;
       el('rs-gen-preview').style.display = 'block';

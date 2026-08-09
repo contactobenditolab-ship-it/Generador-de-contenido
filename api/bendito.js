@@ -88,6 +88,24 @@ async function resolverRefImagenes({ refBase64, refMediaType, refImageUrl, refIm
   return resueltas;
 }
 
+/**
+ * Sube la imagen final de un post (la portada, tal cual queda guardada en
+ * image_url) a Drive → Contenido/Imágenes finales. Si Drive no está
+ * conectado o falla, no bloquea el guardado del post — igual que el resto
+ * de subidas a Drive de este archivo.
+ */
+async function subirImagenFinalADrive(post) {
+  try {
+    const descargada = await descargarImagenBase64(post.image_url);
+    const ext = EXT_BY_MEDIA_TYPE[descargada.mediaType] || 'jpg';
+    const nombreBase = ((post.carpeta ? post.carpeta + ' — ' : '') + (post.sub || post.cuenta) + ' — ' + post.id)
+      .replace(/[\\/]/g, '-');
+    await subirArchivoAContenido(nombreBase + '.' + ext, Buffer.from(descargada.base64, 'base64'), 'Imágenes finales', descargada.mediaType);
+  } catch (e) {
+    console.error('No se pudo subir la imagen final a Drive:', e.message);
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
@@ -436,6 +454,8 @@ module.exports = async function handler(req, res) {
         const { data, error } = await supabase.from('posts').insert(post).select().single();
         if (error) throw error;
 
+        subirImagenFinalADrive(data).catch(() => {});
+
         if (body.inspiration_id) {
           supabase.from('inspirations').update({ used: true }).eq('id', body.inspiration_id).then(() => {});
         }
@@ -519,6 +539,10 @@ module.exports = async function handler(req, res) {
 
         const { data, error } = await supabase.from('posts').update(patch).eq('id', id).select().single();
         if (error) throw error;
+
+        if (patch.image_url !== undefined) {
+          subirImagenFinalADrive(data).catch(() => {});
+        }
 
         if (body.fecha_programada !== undefined) {
           if (data.fecha_programada) {
