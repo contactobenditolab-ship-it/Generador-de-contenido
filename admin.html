@@ -390,14 +390,14 @@ input[type="file"]{display:none;}
       <div id="pinterest-estado" style="margin-bottom:12px;font-size:14px;">Comprobando conexión…</div>
       <div id="pinterest-conectar-bloque" style="display:none;">
         <a class="save-btn" id="pinterest-conectar-btn" style="display:inline-block;text-decoration:none;text-align:center;" href="#">🔗 Conectar Pinterest</a>
-        <div class="field-hint" style="margin-top:12px;">¿La app está en "acceso trial pendiente" y no ves la clave secreta? Pega aquí el token que genera el botón "Generar token" de developers.pinterest.com (con permisos <code>pins:read</code> y <code>boards:read</code>) — funciona igual mientras no caduque.</div>
-        <div class="field" style="margin-top:8px;">
-          <label>Token de acceso (manual)</label>
-          <input type="text" id="pinterest-token-manual" placeholder="pina_...">
-        </div>
-        <button class="save-btn" id="pinterest-guardar-token-btn" style="width:100%;">💾 Guardar token</button>
       </div>
-      <div id="pinterest-conectado-bloque" style="display:none;">
+      <div class="field-hint" style="margin-top:4px;">¿La app está en "acceso trial pendiente" y no ves la clave secreta, o el token ha caducado? Genera uno nuevo con el botón "Generar token" de developers.pinterest.com (permisos <code>pins:read</code> y <code>boards:read</code>) y pégalo aquí — sustituye al anterior.</div>
+      <div class="field" style="margin-top:8px;">
+        <label>Token de acceso (manual)</label>
+        <input type="text" id="pinterest-token-manual" placeholder="pina_...">
+      </div>
+      <button class="save-btn" id="pinterest-guardar-token-btn" style="width:100%;">💾 Guardar token</button>
+      <div id="pinterest-conectado-bloque" style="display:none;margin-top:16px;border-top:2px dashed var(--ink);padding-top:16px;">
         <div class="field">
           <label>Tablón a sincronizar</label>
           <select id="pinterest-tablero-select"></select>
