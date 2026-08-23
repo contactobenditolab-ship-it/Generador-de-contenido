@@ -1172,22 +1172,35 @@
     }
   }
 
+  /** Muestra el bloque de copys en textareas editables — igual si vienen de la IA que si se rellenan a mano (cuando el generador de copy falla). */
   function renderGenResult(r) {
+    r = r || {};
     var blocks = [
-      { label: 'Instagram', value: r.caption_ig + '\n\n' + r.hashtags_ig, shape: 'shape-circle' },
-      { label: 'LinkedIn', value: r.caption_li + '\n\n' + r.hashtags_li, shape: 'shape-square' },
-      { label: 'WhatsApp', value: r.caption_wa, shape: 'shape-triangle' },
-      { label: 'Stories', value: r.stories_text, shape: 'shape-ring' },
+      { id: 'ig', label: 'Instagram', value: r.caption_ig + (r.hashtags_ig ? '\n\n' + r.hashtags_ig : ''), shape: 'shape-circle' },
+      { id: 'li', label: 'LinkedIn', value: r.caption_li + (r.hashtags_li ? '\n\n' + r.hashtags_li : ''), shape: 'shape-square' },
+      { id: 'wa', label: 'WhatsApp', value: r.caption_wa || '', shape: 'shape-triangle' },
+      { id: 'st', label: 'Stories', value: r.stories_text || '', shape: 'shape-ring' },
     ];
     el('rs-gen-blocks').innerHTML = blocks.map(function (b) {
+      var val = b.value === undefined || b.value === null || b.value === 'undefined' ? '' : b.value;
       return '<div class="rs-result-block"><div class="rs-rb-head"><span class="rs-rb-label"><span class="' + b.shape + '"></span>' + esc(b.label) +
-        '</span><button class="rs-copy-btn" data-copy-text="' + esc(b.value) + '">Copiar</button></div>' +
-        '<p>' + esc(b.value) + '</p></div>';
+        '</span><button class="rs-copy-btn" data-copy-id="rs-gen-copy-' + b.id + '">Copiar</button></div>' +
+        '<textarea id="rs-gen-copy-' + b.id + '" style="width:100%;min-height:70px;">' + esc(val) + '</textarea></div>';
     }).join('');
-    el('rs-gen-blocks').querySelectorAll('[data-copy-text]').forEach(function (btn) {
-      btn.addEventListener('click', function () { copyToClipboard(btn.dataset.copyText, btn); });
+    el('rs-gen-blocks').querySelectorAll('[data-copy-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () { copyToClipboard(el(btn.dataset.copyId).value, btn); });
     });
     el('rs-gen-result').style.display = 'block';
+  }
+
+  /** Salta la generación de copy por IA (cuando falla) y deja escribir/pegar los textos a mano para poder guardar el post igualmente. */
+  function handleContinuarSinIA() {
+    if (!state.imageUrl) {
+      setGenStatus('Sube primero una imagen de inspiración.');
+      return;
+    }
+    if (!state.genResult) renderGenResult(null);
+    setGenStatus('✓ Escribe los copys a mano abajo (o pégalos) y guarda cuando quieras.');
   }
 
   async function handleSavePost() {
@@ -1196,14 +1209,22 @@
       setGenStatus('Sube primero una imagen base antes de guardar.');
       return;
     }
-    if (!state.genResult && !editando) {
-      setGenStatus('Genera el copy con IA ("Generar con IA") antes de guardar — aunque luego uses una imagen de otra IA, hace falta el copy generado para crear el post.');
+    if (el('rs-gen-result').style.display === 'none' && !editando) {
+      setGenStatus('Pulsa "Generar con IA" o "Continuar sin IA" para poder escribir/revisar los copys antes de guardar.');
       return;
     }
     var cuenta = el('rs-gen-cuenta').value;
     var isDilo = cuenta === 'dilobonito';
     var prompt = el('rs-gen-prompt').value;
-    var r = state.genResult;
+    // Se leen los textareas de copy en vez de state.genResult directamente, porque el usuario puede haberlos editado a mano (o escrito desde cero si la IA de copy falló).
+    var r = (el('rs-gen-result').style.display !== 'none' && document.getElementById('rs-gen-copy-ig')) ? {
+      caption_ig: el('rs-gen-copy-ig').value,
+      hashtags_ig: '',
+      caption_li: el('rs-gen-copy-li').value,
+      hashtags_li: '',
+      caption_wa: el('rs-gen-copy-wa').value,
+      stories_text: el('rs-gen-copy-st').value,
+    } : state.genResult;
     var saveBtn = document.querySelector('[data-action="rs-save-post"]');
 
     var finalImageUrl = state.imageUrl;
@@ -1659,6 +1680,7 @@
     el('rs-gen-file').addEventListener('change', handleFileChange);
     el('rs-gen-art-file').addEventListener('change', handleArtFileChange);
     el('rs-gen-btn').addEventListener('click', handleGenerate);
+    el('rs-gen-skip-btn').addEventListener('click', handleContinuarSinIA);
     el('rs-gen-cuenta').addEventListener('change', function (e) {
       if (window.actualizarFavicon) window.actualizarFavicon(e.target.value);
     });
