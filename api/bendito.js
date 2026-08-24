@@ -106,7 +106,7 @@ async function subirImagenFinalADrive(post) {
   }
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (!requireAuth(req, res)) return;
 
   try {
@@ -594,4 +594,12 @@ module.exports = async function handler(req, res) {
     console.error('Error /api/bendito:', e.message);
     return res.status(500).json({ error: e.message || 'Error en el servidor' });
   }
-};
+}
+
+module.exports = handler;
+// Sin esto, Vercel corta la función a los 10s por defecto — Gemini con
+// imagen + JSON largo ("generarCopy", "editarConIA"...) a veces tarda más
+// que eso, y el botón "Generar con IA" fallaba justo en esos casos (nunca
+// con imágenes pequeñas o respuestas cortas, de ahí lo de "a veces sí, a
+// veces no"). 60s es el máximo permitido en el plan Hobby de Vercel.
+module.exports.config = { maxDuration: 60 };
