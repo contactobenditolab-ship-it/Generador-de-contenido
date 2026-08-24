@@ -29,6 +29,32 @@
   };
 
   function el(id) { return document.getElementById(id); }
+
+  /** Generador con IA como wizard de 4 pasos: 1 imagen/prompt, 2 copy, 3 imagen final (opcional), 4 detalles y guardar.
+   * "rs-gen-result" (pasos 2-4) sigue siendo el mismo interruptor de siempre — solo se le añade la navegación entre sub-pasos. */
+  function actualizarDotsWizard(paso) {
+    document.querySelectorAll('#rs-wizard-dots .rs-wd-item').forEach(function (it) {
+      var n = Number(it.dataset.wd);
+      it.classList.toggle('active', n === paso);
+      it.classList.toggle('done', n < paso);
+    });
+  }
+  function mostrarSubPasoWizard(sub) {
+    el('rs-gen-sub2').style.display = sub === 2 ? 'block' : 'none';
+    el('rs-gen-sub3').style.display = sub === 3 ? 'block' : 'none';
+    el('rs-gen-sub4').style.display = sub === 4 ? 'block' : 'none';
+    actualizarDotsWizard(sub);
+  }
+  function mostrarResultadoWizard(subInicial) {
+    el('rs-gen-step1').style.display = 'none';
+    el('rs-gen-result').style.display = 'block';
+    mostrarSubPasoWizard(subInicial || 2);
+  }
+  function ocultarResultadoWizard() {
+    el('rs-gen-step1').style.display = 'block';
+    el('rs-gen-result').style.display = 'none';
+    actualizarDotsWizard(1);
+  }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -154,13 +180,12 @@
       el('rs-gen-preview').style.display = 'block';
       el('rs-gen-prompt').value = post.sub || '';
       el('rs-gen-ficha').style.display = 'none';
-      el('rs-gen-result').style.display = 'none';
       el('rs-gen-cuenta').value = post.cuenta;
       if (window.actualizarFavicon) window.actualizarFavicon(post.cuenta);
       el('rs-gen-carpeta').value = post.carpeta || '';
       el('rs-gen-fecha').value = post.fecha_programada || '';
       el('rs-gen-blocks').innerHTML = '<p class="rs-feed-empty">Editando solo la imagen — el copy actual del post no cambia salvo que pulses "Generar con IA" otra vez.</p>';
-      el('rs-gen-result').style.display = 'block';
+      mostrarResultadoWizard(3);
       renderVariantesPost();
       if (post.prompt_edicion_externa) {
         el('rs-gen-prompt-ext-texto').textContent = post.prompt_edicion_externa;
@@ -664,7 +689,7 @@
       el('rs-gen-preview').style.display = 'block';
       el('rs-gen-prompt').value = insp.prompt || '';
       el('rs-gen-ficha').style.display = 'none';
-      el('rs-gen-result').style.display = 'none';
+      ocultarResultadoWizard();
       if (insp.prompt_edicion_externa) {
         el('rs-gen-prompt-ext-texto').textContent = insp.prompt_edicion_externa;
         el('rs-gen-prompt-ext-box').style.display = 'block';
@@ -903,7 +928,7 @@
     el('rs-post-variantes-box').style.display = 'none';
     el('rs-gen-prompt-ext-box').style.display = 'none';
     el('rs-gen-resultados-externos-grid').innerHTML = '';
-    el('rs-gen-result').style.display = 'none';
+    ocultarResultadoWizard();
     el('rs-gen-art-file').value = '';
     el('rs-gen-art-preview').style.display = 'none';
     el('rs-gen-preview').src = info.dataUrl;
@@ -1190,7 +1215,7 @@
     el('rs-gen-blocks').querySelectorAll('[data-copy-id]').forEach(function (btn) {
       btn.addEventListener('click', function () { copyToClipboard(el(btn.dataset.copyId).value, btn); });
     });
-    el('rs-gen-result').style.display = 'block';
+    mostrarResultadoWizard(2);
   }
 
   /** Salta la generación de copy por IA (cuando falla) y deja escribir/pegar los textos a mano para poder guardar el post igualmente. */
@@ -1310,7 +1335,7 @@
     el('rs-gen-file').value = '';
     el('rs-gen-preview').style.display = 'none';
     el('rs-gen-prompt').value = '';
-    el('rs-gen-result').style.display = 'none';
+    ocultarResultadoWizard();
     el('rs-gen-art-file').value = '';
     el('rs-gen-art-preview').style.display = 'none';
     el('rs-gen-ia-instruccion').value = '';
@@ -1674,6 +1699,7 @@
   // window.Generador.start() solo después de un login válido (o si ya
   // había un token guardado), para no disparar /api/bendito sin auth.
   document.addEventListener('DOMContentLoaded', function () {
+    actualizarDotsWizard(1);
     document.querySelectorAll('.rs-tab').forEach(function (b) {
       b.addEventListener('click', function () { switchTab(b.dataset.rsTab); });
     });
@@ -1681,6 +1707,11 @@
     el('rs-gen-art-file').addEventListener('change', handleArtFileChange);
     el('rs-gen-btn').addEventListener('click', handleGenerate);
     el('rs-gen-skip-btn').addEventListener('click', handleContinuarSinIA);
+    el('rs-wiz-back-1').addEventListener('click', ocultarResultadoWizard);
+    el('rs-wiz-next-2').addEventListener('click', function () { mostrarSubPasoWizard(3); });
+    el('rs-wiz-back-2').addEventListener('click', function () { mostrarSubPasoWizard(2); });
+    el('rs-wiz-next-3').addEventListener('click', function () { mostrarSubPasoWizard(4); });
+    el('rs-wiz-back-3').addEventListener('click', function () { mostrarSubPasoWizard(3); });
     el('rs-gen-cuenta').addEventListener('change', function (e) {
       if (window.actualizarFavicon) window.actualizarFavicon(e.target.value);
     });

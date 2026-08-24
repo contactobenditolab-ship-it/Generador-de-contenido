@@ -154,6 +154,15 @@ input[type="file"]{display:none;}
 .rs-gallery-actions{position:absolute;top:4px;left:4px;display:flex;gap:4px;}
 .rs-gallery-actions button{width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;border:2px solid var(--ink);font-size:11px;cursor:pointer;padding:0;line-height:1;}
 .rs-gallery-actions button:hover{background:var(--blue);}
+.rs-wizard-dots{display:flex;justify-content:space-between;gap:4px;margin-bottom:22px;}
+.rs-wd-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:9.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--ink);opacity:.4;text-align:center;}
+.rs-wd-item .rs-wd-dot{width:24px;height:24px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',Arial,sans-serif;font-size:11px;color:var(--ink);}
+.rs-wd-item.active{opacity:1;}
+.rs-wd-item.active .rs-wd-dot{background:var(--blue);border-color:var(--blue);color:#fff;}
+.rs-wd-item.done{opacity:.75;}
+.rs-wd-item.done .rs-wd-dot{background:var(--ink);border-color:var(--ink);color:#fff;}
+.rs-wizard-nav{display:flex;gap:8px;margin-top:16px;}
+.rs-wizard-nav button{flex:1;margin:0;}
 .carpetas-botones{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;}
 .carpeta-btn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:76px;font-size:14px;font-weight:800;letter-spacing:.3px;text-align:center;padding:16px;border:3px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:transform .05s,box-shadow .05s;}
 .carpeta-btn:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--ink);}
@@ -415,116 +424,150 @@ input[type="file"]{display:none;}
     <div class="card" style="max-width:480px;">
       <div class="card-title">🤖 Generador con IA</div>
 
-      <div class="field">
-        <label>Cuenta</label>
-        <select id="rs-gen-cuenta">
-          <option value="bendito_lab">Bendito Lab (B2B)</option>
-          <option value="dilobonito">Dilo Bonito (B2C)</option>
-        </select>
+      <div class="rs-wizard-dots" id="rs-wizard-dots">
+        <div class="rs-wd-item" data-wd="1"><span class="rs-wd-dot">1</span><span>Imagen</span></div>
+        <div class="rs-wd-item" data-wd="2"><span class="rs-wd-dot">2</span><span>Copy</span></div>
+        <div class="rs-wd-item" data-wd="3"><span class="rs-wd-dot">3</span><span>Imagen final</span></div>
+        <div class="rs-wd-item" data-wd="4"><span class="rs-wd-dot">4</span><span>Guardar</span></div>
       </div>
 
-      <div class="field">
-        <label>Imagen de inspiración</label>
-      </div>
-      <label class="img-btn" for="rs-gen-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir imagen</label>
-      <input type="file" accept="image/*" id="rs-gen-file">
-      <img id="rs-gen-preview" class="rs-gen-preview">
-
-      <div id="rs-post-variantes-box" style="display:none;margin-bottom:14px;">
-        <label style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ink);display:block;margin-bottom:6px;">Variantes de este post</label>
-        <div id="rs-post-variantes-grid" class="rs-gallery-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:8px;"></div>
-        <label class="img-btn" for="rs-post-variante-file" style="display:inline-block;">📤 Añadir variante a este post</label>
-        <input type="file" accept="image/*" id="rs-post-variante-file">
-        <div class="field-hint">Toca una miniatura para usarla como base aquí (para generar prompt, editar con IA o el logo de ese momento) sin perder las demás.</div>
-      </div>
-
-      <div id="rs-gen-ficha" style="display:none;font-size:12px;color:#555;background:#F4F1E6;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.6;"></div>
-
-      <div class="field">
-        <label>Prompt</label>
-        <textarea id="rs-gen-prompt" placeholder="Se genera solo al subir la imagen. Puedes editarlo."></textarea>
-        <button type="button" class="rs-copy-btn" id="rs-gen-reanalizar-btn" style="align-self:flex-start;margin-top:4px;">🔄 Sugerir prompt</button>
-      </div>
-
-      <div class="field">
-        <label>Formato principal</label>
-        <select id="rs-gen-formato">
-          <option value="instagram">Post Instagram</option>
-          <option value="linkedin">Post LinkedIn</option>
-          <option value="stories">Stories</option>
-          <option value="whatsapp">Canal de WhatsApp</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Carpeta / categoría (opcional)</label>
-        <select id="rs-gen-carpeta"><option value="">— Ninguna —</option></select>
-        <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Se crean en la pestaña 📁 Carpetas. Podrás filtrar por ella en el archivo y en el calendario.</div>
-      </div>
-
-      <div class="field">
-        <label>Fecha de publicación (opcional)</label>
-        <input type="date" id="rs-gen-fecha">
-        <div class="field-hint">Si la indicas, se crea un evento en el Google Calendar de Bendito Lab (el mismo que usa bendito-os).</div>
-      </div>
-
-      <button class="save-btn" id="rs-gen-btn" data-action="rs-generate" style="width:100%;">Generar con IA</button>
-      <button class="save-btn" id="rs-gen-skip-btn" style="width:100%;margin-top:8px;background:#fff;">✍️ Continuar sin IA (escribir copys a mano)</button>
-      <div class="field-hint" style="margin-top:4px;text-align:center;">Úsalo si el generador de IA falla — te deja escribir los copys y guardar la imagen final igualmente.</div>
-      <div class="rs-gen-status" id="rs-gen-status"></div>
-
-      <div id="rs-gen-result" style="display:none;margin-top:20px;padding-top:16px;border-top:1px dashed #E0DDD6;">
-        <div id="rs-gen-blocks"></div>
-
-        <div class="field" style="margin-top:6px;">
-          <label>Editar imagen con IA (opcional)</label>
-          <textarea id="rs-gen-ia-instruccion" placeholder="Ej: Añade el texto 'Feliz cumpleaños' sobre la taza, integrado con la curvatura y la luz."></textarea>
-          <div class="field-hint">La IA integra el texto/logo/dibujo directamente en la foto (perspectiva, sombras, material) — no lo pega como una pegatina.</div>
+      <!-- PASO 1: imagen e inspiración -->
+      <div id="rs-gen-step1">
+        <div class="field">
+          <label>Cuenta</label>
+          <select id="rs-gen-cuenta">
+            <option value="bendito_lab">Bendito Lab (B2B)</option>
+            <option value="dilobonito">Dilo Bonito (B2C)</option>
+          </select>
         </div>
 
         <div class="field">
-          <label>Logos guardados (opcional)</label>
-          <select id="rs-gen-logo-select" multiple size="4"></select>
-          <div class="field-hint">Puedes elegir varios logos a la vez de tu librería (pestaña 🖼️ Logos) — Ctrl/Cmd+clic (o mantén pulsado en móvil) para seleccionar más de uno.</div>
+          <label>Imagen de inspiración</label>
+        </div>
+        <label class="img-btn" for="rs-gen-file" style="display:inline-block;margin-bottom:14px;">📤 Elegir imagen</label>
+        <input type="file" accept="image/*" id="rs-gen-file">
+        <img id="rs-gen-preview" class="rs-gen-preview">
+
+        <div id="rs-post-variantes-box" style="display:none;margin-bottom:14px;">
+          <label style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ink);display:block;margin-bottom:6px;">Variantes de este post</label>
+          <div id="rs-post-variantes-grid" class="rs-gallery-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:8px;"></div>
+          <label class="img-btn" for="rs-post-variante-file" style="display:inline-block;">📤 Añadir variante a este post</label>
+          <input type="file" accept="image/*" id="rs-post-variante-file">
+          <div class="field-hint">Toca una miniatura para usarla como base aquí (para generar prompt, editar con IA o el logo de ese momento) sin perder las demás.</div>
+        </div>
+
+        <div id="rs-gen-ficha" style="display:none;font-size:12px;color:#555;background:#F4F1E6;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.6;"></div>
+
+        <div class="field">
+          <label>Prompt</label>
+          <textarea id="rs-gen-prompt" placeholder="Se genera solo al subir la imagen. Puedes editarlo."></textarea>
+          <button type="button" class="rs-copy-btn" id="rs-gen-reanalizar-btn" style="align-self:flex-start;margin-top:4px;">🔄 Sugerir prompt</button>
         </div>
 
         <div class="field">
-          <label>O imagen de referencia suelta (opcional)</label>
+          <label>Formato principal</label>
+          <select id="rs-gen-formato">
+            <option value="instagram">Post Instagram</option>
+            <option value="linkedin">Post LinkedIn</option>
+            <option value="stories">Stories</option>
+            <option value="whatsapp">Canal de WhatsApp</option>
+          </select>
         </div>
-        <label class="img-btn" for="rs-gen-art-file" style="display:inline-block;">📤 Elegir imagen de referencia</label>
-        <input type="file" accept="image/*" id="rs-gen-art-file">
-        <div class="field-hint" style="margin-top:6px;">Solo hace falta una de las dos opciones — si el texto/logo ya está escrito en la instrucción de arriba, tampoco hace falta ninguna.</div>
-        <img id="rs-gen-art-preview" class="rs-gen-preview" style="max-height:100px;object-fit:contain;background:#F4F1E6;margin-top:10px;">
 
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="save-btn" id="rs-gen-ia-btn" data-action="rs-edit-ia" style="flex:1;">🪄 Editar con IA</button>
-          <button class="save-btn" id="rs-gen-prompt-ext-btn" style="flex:1;background:#fff;">📝 Solo generar prompt</button>
-        </div>
-        <div class="field-hint" style="margin-top:4px;">"Solo generar prompt" no gasta cuota de edición de imagen — te da el texto para pegarlo en Midjourney, ChatGPT u otra IA, y luego subes aquí el resultado.</div>
-        <div class="rs-gen-status" id="rs-gen-ia-status"></div>
-        <img id="rs-gen-ia-preview" class="rs-gen-preview" style="margin-top:10px;">
+        <button class="save-btn" id="rs-gen-btn" data-action="rs-generate" style="width:100%;">Generar con IA</button>
+        <button class="save-btn" id="rs-gen-skip-btn" style="width:100%;margin-top:8px;background:#fff;">✍️ Continuar sin IA (escribir copys a mano)</button>
+        <div class="field-hint" style="margin-top:4px;text-align:center;">Úsalo si el generador de IA falla — te deja escribir los copys y guardar la imagen final igualmente.</div>
+        <div class="rs-gen-status" id="rs-gen-status"></div>
+      </div>
 
-        <div id="rs-gen-prompt-ext-box" style="display:none;margin-top:10px;background:var(--paper);border:2px solid var(--ink);padding:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <strong style="font-size:11px;text-transform:uppercase;">Prompt para pegar en otra IA</strong>
-            <div style="display:flex;gap:6px;">
-              <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-guardar-btn">💾 Guardar</button>
-              <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-copy-btn">Copiar</button>
-            </div>
+      <div id="rs-gen-result" style="display:none;margin-top:6px;">
+
+        <!-- PASO 2: copy -->
+        <div id="rs-gen-sub2">
+          <div id="rs-gen-blocks"></div>
+          <div class="rs-wizard-nav">
+            <button type="button" class="img-btn" id="rs-wiz-back-1">← Atrás</button>
+            <button type="button" class="save-btn" id="rs-wiz-next-2">Imagen final →</button>
           </div>
-          <p id="rs-gen-prompt-ext-texto" style="font-size:13px;font-weight:600;white-space:pre-line;margin:0;"></p>
         </div>
 
-        <div class="field" style="margin-top:14px;">
-          <label>Subir resultado(s) creado(s) en otra IA (opcional)</label>
-        </div>
-        <label class="img-btn" for="rs-gen-resultado-externo-file" style="display:inline-block;">📤 Elegir imagen(es) final(es)</label>
-        <input type="file" accept="image/*" id="rs-gen-resultado-externo-file" multiple>
-        <div class="field-hint" style="margin-top:6px;">Puedes subir varias a la vez y elegir después cuál usar. Se guardará la que esté marcada al pulsar "Guardar en el archivo".</div>
-        <div id="rs-gen-resultados-externos-grid" class="rs-gallery-grid" style="margin-top:8px;"></div>
+        <!-- PASO 3: imagen final (opcional) -->
+        <div id="rs-gen-sub3" style="display:none;">
+          <div class="field" style="margin-top:6px;">
+            <label>Editar imagen con IA (opcional)</label>
+            <textarea id="rs-gen-ia-instruccion" placeholder="Ej: Añade el texto 'Feliz cumpleaños' sobre la taza, integrado con la curvatura y la luz."></textarea>
+            <div class="field-hint">La IA integra el texto/logo/dibujo directamente en la foto (perspectiva, sombras, material) — no lo pega como una pegatina.</div>
+          </div>
 
-        <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:14px;">✓ Guardar en el archivo</button>
-        <div class="field-hint" style="margin-top:6px;text-align:center;">Se guarda la imagen editada con IA o el resultado subido manualmente si has usado alguno de los dos; si no, se publica la imagen de inspiración tal cual.</div>
+          <div class="field">
+            <label>Logos guardados (opcional)</label>
+            <select id="rs-gen-logo-select" multiple size="4"></select>
+            <div class="field-hint">Puedes elegir varios logos a la vez de tu librería (pestaña 🖼️ Logos) — Ctrl/Cmd+clic (o mantén pulsado en móvil) para seleccionar más de uno.</div>
+          </div>
+
+          <div class="field">
+            <label>O imagen de referencia suelta (opcional)</label>
+          </div>
+          <label class="img-btn" for="rs-gen-art-file" style="display:inline-block;">📤 Elegir imagen de referencia</label>
+          <input type="file" accept="image/*" id="rs-gen-art-file">
+          <div class="field-hint" style="margin-top:6px;">Solo hace falta una de las dos opciones — si el texto/logo ya está escrito en la instrucción de arriba, tampoco hace falta ninguna.</div>
+          <img id="rs-gen-art-preview" class="rs-gen-preview" style="max-height:100px;object-fit:contain;background:#F4F1E6;margin-top:10px;">
+
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="save-btn" id="rs-gen-ia-btn" data-action="rs-edit-ia" style="flex:1;">🪄 Editar con IA</button>
+            <button class="save-btn" id="rs-gen-prompt-ext-btn" style="flex:1;background:#fff;">📝 Solo generar prompt</button>
+          </div>
+          <div class="field-hint" style="margin-top:4px;">"Solo generar prompt" no gasta cuota de edición de imagen — te da el texto para pegarlo en Midjourney, ChatGPT u otra IA, y luego subes aquí el resultado.</div>
+          <div class="rs-gen-status" id="rs-gen-ia-status"></div>
+          <img id="rs-gen-ia-preview" class="rs-gen-preview" style="margin-top:10px;">
+
+          <div id="rs-gen-prompt-ext-box" style="display:none;margin-top:10px;background:var(--paper);border:2px solid var(--ink);padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong style="font-size:11px;text-transform:uppercase;">Prompt para pegar en otra IA</strong>
+              <div style="display:flex;gap:6px;">
+                <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-guardar-btn">💾 Guardar</button>
+                <button type="button" class="rs-copy-btn" id="rs-gen-prompt-ext-copy-btn">Copiar</button>
+              </div>
+            </div>
+            <p id="rs-gen-prompt-ext-texto" style="font-size:13px;font-weight:600;white-space:pre-line;margin:0;"></p>
+          </div>
+
+          <div class="field" style="margin-top:14px;">
+            <label>Subir resultado(s) creado(s) en otra IA (opcional)</label>
+          </div>
+          <label class="img-btn" for="rs-gen-resultado-externo-file" style="display:inline-block;">📤 Elegir imagen(es) final(es)</label>
+          <input type="file" accept="image/*" id="rs-gen-resultado-externo-file" multiple>
+          <div class="field-hint" style="margin-top:6px;">Puedes subir varias a la vez y elegir después cuál usar. Se guardará la que esté marcada al pulsar "Guardar en el archivo".</div>
+          <div id="rs-gen-resultados-externos-grid" class="rs-gallery-grid" style="margin-top:8px;"></div>
+
+          <div class="rs-wizard-nav">
+            <button type="button" class="img-btn" id="rs-wiz-back-2">← Atrás</button>
+            <button type="button" class="save-btn" id="rs-wiz-next-3">Guardar →</button>
+          </div>
+        </div>
+
+        <!-- PASO 4: detalles y guardar -->
+        <div id="rs-gen-sub4" style="display:none;">
+          <div class="field">
+            <label>Carpeta / categoría (opcional)</label>
+            <select id="rs-gen-carpeta"><option value="">— Ninguna —</option></select>
+            <div class="field-hint">Para agrupar por cliente, proyecto o campaña. Se crean en la pestaña 📁 Carpetas. Podrás filtrar por ella en el archivo y en el calendario.</div>
+          </div>
+
+          <div class="field">
+            <label>Fecha de publicación (opcional)</label>
+            <input type="date" id="rs-gen-fecha">
+            <div class="field-hint">Si la indicas, se crea un evento en el Google Calendar de Bendito Lab (el mismo que usa bendito-os).</div>
+          </div>
+
+          <button class="save-btn" data-action="rs-save-post" style="width:100%;margin-top:6px;">✓ Guardar en el archivo</button>
+          <div class="field-hint" style="margin-top:6px;text-align:center;">Se guarda la imagen editada con IA o el resultado subido manualmente si has usado alguno de los dos; si no, se publica la imagen de inspiración tal cual.</div>
+
+          <div class="rs-wizard-nav">
+            <button type="button" class="img-btn" id="rs-wiz-back-3">← Atrás</button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
