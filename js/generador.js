@@ -184,8 +184,15 @@
       if (window.actualizarFavicon) window.actualizarFavicon(post.cuenta);
       el('rs-gen-carpeta').value = post.carpeta || '';
       el('rs-gen-fecha').value = post.fecha_programada || '';
-      el('rs-gen-blocks').innerHTML = '<p class="rs-feed-empty">Editando solo la imagen — el copy actual del post no cambia salvo que pulses "Generar con IA" otra vez.</p>';
-      mostrarResultadoWizard(3);
+      // Se cargan los copys reales del post (editables) en vez de un mensaje
+      // fijo — si no, al guardar no existen los campos rs-gen-copy-* y el
+      // usuario pierde de vista el copy actual mientras edita la imagen.
+      renderGenResult({
+        caption_ig: post.ig_caption, hashtags_ig: post.ig_hashtags,
+        caption_li: post.li_caption, hashtags_li: post.li_hashtags,
+        caption_wa: post.wa_text, stories_text: post.stories_text,
+      });
+      mostrarSubPasoWizard(3);
       renderVariantesPost();
       if (post.prompt_edicion_externa) {
         el('rs-gen-prompt-ext-texto').textContent = post.prompt_edicion_externa;
