@@ -602,6 +602,7 @@
     var statusEl = el('insp-bulk-status');
     var subidas = 0;
     var duplicadas = 0;
+    var errores = [];
     var hashesEnEsteLote = {};
     for (var i = 0; i < files.length; i++) {
       statusEl.textContent = 'Subiendo ' + (i + 1) + ' de ' + files.length + '…';
@@ -617,10 +618,15 @@
         var res = await BL_API.benditoPost({ accion: 'crearInspiracion', image_url: up.url, image_hash: hash });
         if (res.duplicado) duplicadas++; else subidas++;
       } catch (err) {
-        statusEl.textContent = 'Error subiendo "' + files[i].name + '": ' + err.message;
+        errores.push(files[i].name + ': ' + err.message);
       }
     }
-    statusEl.textContent = '✓ ' + subidas + ' guardada(s)' + (duplicadas ? ', ' + duplicadas + ' ya existían (omitida' + (duplicadas === 1 ? '' : 's') + ')' : '') + '.';
+    if (errores.length) {
+      statusEl.textContent = '✗ ' + errores.length + ' fallo(s): ' + errores.join(' | ') +
+        (subidas || duplicadas ? ' — (' + subidas + ' guardada(s), ' + duplicadas + ' ya existía(n))' : '');
+    } else {
+      statusEl.textContent = '✓ ' + subidas + ' guardada(s)' + (duplicadas ? ', ' + duplicadas + ' ya existían (omitida' + (duplicadas === 1 ? '' : 's') + ')' : '') + '.';
+    }
     el('insp-bulk-file').value = '';
     loadGallery();
   }

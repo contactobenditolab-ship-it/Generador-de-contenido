@@ -3,12 +3,11 @@
 //
 // Backend del generador de contenido con IA de /bendito-app (pestaña
 // "Bendito Lab & Dilo Bonito · App interna de contenido"). Todo en un único
-// endpoint (posts, inspiraciones, subida de imagen a Blob, sugerencia de
+// endpoint (posts, inspiraciones, subida de imagen a Supabase Storage, sugerencia de
 // prompt y generación de copy con Claude) para no pasar del límite de
 // Serverless Functions del plan — mismo criterio que api/db.js.
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
-const { put } = require('@vercel/blob');
 const { requireAuth } = require('../lib/auth');
 const { callGeminiVisionJSON } = require('../lib/gemini-text');
 const { DIRECCION_CREATIVA_DEFAULT, promptSugerirSystem, copySystem, promptEdicionExternaSystem } = require('../lib/bendito-prompts');
@@ -21,6 +20,7 @@ const { listarTableros: listarTablerosPinterest, sincronizarPinesNuevos: sincron
 const MAX_BYTES = 4 * 1024 * 1024; // deja margen bajo el límite de 4.5MB de body de Vercel
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
 const CUENTAS = ['bendito_lab', 'dilobonito'];
+const BUCKET_IMAGENES = 'generador-imagenes';
 
 let cachedClient = null;
 function db() {
@@ -49,9 +49,17 @@ async function subirImagen(body) {
   if (buf.length > MAX_BYTES) throw new Error('Imagen demasiado grande (máx 4MB)');
 
   const safeName = String(filename || 'inspiracion').replace(/[^a-zA-Z0-9_-]/g, '-');
-  const path = 'bendito-app/' + safeName + '-' + Date.now() + '.' + ext;
-  const result = await put(path, buf, { access: 'public', contentType: mediaType, addRandomSuffix: false });
-  return { url: result.url, path };
+  const path = safeName + '-' + Date.now() + '.' + ext;
+  // El Buffer se envuelve en un Blob: si se manda tal cual, storage-js lo
+  // trata como cuerpo crudo de texto en algunos runtimes serverless y cada
+  // byte >= 0x80 se corrompe (mismo bug ya visto y resuelto en bendito-os,
+  // ver subirArchivoCatalogoStorage). Con Blob usa multipart/FormData y los
+  // bytes llegan intactos.
+  const cuerpo = new Blob([new Uint8Array(buf)], { type: mediaType });
+  const { error } = await db().storage.from(BUCKET_IMAGENES).upload(path, cuerpo, { contentType: mediaType, upsert: false });
+  if (error) throw new Error('Error subiendo la imagen: ' + error.message);
+  const { data } = db().storage.from(BUCKET_IMAGENES).getPublicUrl(path);
+  return { url: data.publicUrl, path };
 }
 
 const MEDIA_TYPE_BY_CONTENT_TYPE = { 'image/png': 'image/png', 'image/jpeg': 'image/jpeg', 'image/webp': 'image/webp', 'image/gif': 'image/gif' };

@@ -16,9 +16,9 @@ funciones serverless en `api/` y Supabase como base de datos.
 
 - `admin.html` — login + panel del generador (única página de la app).
 - `api/auth.js` — login (password → token HMAC).
-- `api/bendito.js` — endpoint único: subida de imágenes (Vercel Blob),
-  sugerencia de prompt y generación de copy (Gemini), CRUD de posts,
-  inspiraciones y logos (Supabase).
+- `api/bendito.js` — endpoint único: subida de imágenes (Supabase Storage,
+  bucket `generador-imagenes`), sugerencia de prompt y generación de copy
+  (Gemini), CRUD de posts, inspiraciones y logos (Supabase).
 - `lib/gemini-text.js`, `lib/bendito-prompts.js` — llamada a Gemini (texto +
   visión, JSON estructurado) y prompts de marca. Antes usaba Claude
   (`lib/anthropic.js`, eliminado) — se cambió a Gemini porque tiene nivel
@@ -70,15 +70,15 @@ defecto de `lib/bendito-prompts.js`.
 - `ADMIN_PASSWORD` — contraseña de acceso al panel.
 - `ADMIN_SESSION_SECRET` — secreto para firmar los tokens de sesión.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — mismo proyecto Supabase
-  que ya usan `bendito-os` y `bendito-lab-canva`.
+  que ya usan `bendito-os` y `bendito-lab-canva`. También aloja el bucket
+  de Storage `generador-imagenes` (ver `supabase/schema.sql`) donde se
+  suben las imágenes — antes se subían a Vercel Blob.
 - `GOOGLE_AI_API_KEY` — API key de Google AI Studio (aistudio.google.com),
   usada tanto para el texto (`lib/gemini-text.js`) como para la edición de
   imagen (`lib/gemini-image.js`). Tiene nivel gratuito con límite de
   peticiones por minuto/día.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — **los mismos valores que ya
   tiene `bendito-os`** en Vercel, para sincronizar con Google Calendar.
-- Vercel Blob debe estar conectado al proyecto (Storage → Blob) para poder
-  subir imágenes.
 - `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET` — credenciales de una
   app de Pinterest (developers.pinterest.com), con redirect URI
   `https://generador-de-contenido.vercel.app/api/auth/pinterest/callback`.
