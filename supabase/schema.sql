@@ -54,3 +54,14 @@ alter table posts enable row level security;
 alter table inspirations enable row level security;
 alter table logos enable row level security;
 alter table carpetas enable row level security;
+
+-- Bucket de imágenes (inspiraciones, logos, posts editados). Antes se subía
+-- a Vercel Blob (put() en api/bendito.js) — se migró a Supabase Storage
+-- porque el store de Blob del equipo se quedó suspendido (cupo de
+-- "Advanced Operations" agotado por otro proyecto que comparte la misma
+-- cuenta de Vercel, ver bendito-lab-canva/lib/content-store.js) y empezó a
+-- devolver 403 tanto en lecturas como en escrituras nuevas, para todos los
+-- proyectos que usaban ese store.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('generador-imagenes', 'generador-imagenes', true, 4194304, array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do nothing;
